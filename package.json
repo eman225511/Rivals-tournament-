@@ -1,0 +1,13 @@
+{
+  "name": "rivals-tournament",
+  "version": "1.0.0",
+  "description": "Rivals Duo Tournament signup with Vercel backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "type": "module"
+}
