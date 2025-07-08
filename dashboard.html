@@ -96,12 +96,31 @@
       font-size: 1rem;
       margin-top: 10px;
       transition: 0.3s;
+      position: relative;
     }
-    .login-btn:hover {
+    .login-btn:hover:not(:disabled) {
       background: #f9d900;
+    }
+    .login-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #999;
+    }
+    .login-btn.loading {
+      color: transparent;
+    }
+    .login-btn.loading::after {
+      content: "⏳";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: #282843;
+      animation: spin 1s linear infinite;
     }
     .dashboard-content {
       display: none;
+      transition: opacity 0.3s ease;
     }
     .dashboard-content.authenticated {
       display: block;
@@ -126,10 +145,32 @@
       cursor: pointer;
       margin: 5px;
       transition: 0.3s;
+      position: relative;
     }
-    .btn:hover {
+    .btn:hover:not(:disabled) {
       background: #f9d900;
       box-shadow: 0 0 8px #f9d900aa;
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #999;
+    }
+    .btn.loading {
+      color: transparent;
+    }
+    .btn.loading::after {
+      content: "⏳";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: #282843;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
     .btn.danger {
       background: #dc3545;
@@ -169,6 +210,9 @@
       border-radius: 5px;
       margin: 10px 0;
       display: none;
+      transition: opacity 0.3s ease;
+      text-align: center;
+      font-weight: 600;
     }
     #status.success {
       background: #d4edda;
@@ -271,6 +315,37 @@
   <script>
     let currentTeam = null;
     let bracketId = null;
+    let isLoading = false; // Global loading state to prevent spam
+
+    // Helper function to set button loading state
+    function setButtonLoading(button, loading = true) {
+      if (loading) {
+        button.disabled = true;
+        button.classList.add('loading');
+      } else {
+        button.disabled = false;
+        button.classList.remove('loading');
+      }
+    }
+
+    // Helper function to set all action buttons state
+    function setAllButtonsLoading(loading = true) {
+      const buttons = document.querySelectorAll('.btn, .login-btn');
+      buttons.forEach(btn => setButtonLoading(btn, loading));
+    }
+
+    // Debounce function to prevent rapid clicks
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
 
     function showLoginError(message) {
       const errorDiv = document.getElementById('loginError');
@@ -286,13 +361,31 @@
       status.textContent = message;
       status.className = type;
       status.style.display = 'block';
-      setTimeout(() => {
-        status.style.display = 'none';
-      }, 5000);
+      
+      // Scroll status into view smoothly
+      status.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      
+      // Clear any existing timeout
+      if (showStatus.timeout) {
+        clearTimeout(showStatus.timeout);
+      }
+      
+      // Set new timeout with longer duration for important messages
+      const duration = type === 'error' ? 8000 : 5000;
+      showStatus.timeout = setTimeout(() => {
+        status.style.opacity = '0';
+        setTimeout(() => {
+          status.style.display = 'none';
+          status.style.opacity = '1';
+        }, 300);
+      }, duration);
     }
 
     async function authenticateTeam() {
+      if (isLoading) return; // Prevent spam clicks
+      
       const inputBracketId = document.getElementById('bracketIdInput').value.trim().toUpperCase();
+      const loginBtn = document.querySelector('.login-btn');
       
       if (!inputBracketId) {
         showLoginError('Please enter your Bracket ID');
@@ -305,6 +398,9 @@
       }
 
       try {
+        isLoading = true;
+        setButtonLoading(loginBtn, true);
+        
         // Load all brackets and find the team
         const response = await fetch('/api/bracket');
         if (!response.ok) {
@@ -332,6 +428,9 @@
         }
       } catch (error) {
         showLoginError('Failed to authenticate: ' + error.message);
+      } finally {
+        isLoading = false;
+        setButtonLoading(loginBtn, false);
       }
     }
 
@@ -367,10 +466,15 @@
     }
 
     async function refreshTeamData() {
-      if (!bracketId) return;
+      if (!bracketId || isLoading) return;
 
+      const refreshBtn = event.target;
+      
       try {
+        isLoading = true;
+        setButtonLoading(refreshBtn, true);
         showStatus('Refreshing team data...', 'success');
+        
         const response = await fetch('/api/bracket');
         const data = await response.json();
         
@@ -384,11 +488,14 @@
         }
       } catch (error) {
         showStatus('Failed to refresh data: ' + error.message, 'error');
+      } finally {
+        isLoading = false;
+        setButtonLoading(refreshBtn, false);
       }
     }
 
     async function removeTeam() {
-      if (!bracketId || !currentTeam) return;
+      if (!bracketId || !currentTeam || isLoading) return;
 
       if (!confirm(`⚠️ Are you sure you want to remove your team (${currentTeam.bracketId}) from the tournament?`)) {
         return;
@@ -398,10 +505,13 @@
         return;
       }
 
+      const removeBtn = event.target;
+
       try {
+        isLoading = true;
+        setAllButtonsLoading(true);
         showStatus('Removing team from tournament...', 'success');
         
-        // We'll need to create a team removal API endpoint
         const response = await fetch('/api/remove-team', {
           method: 'POST',
           headers: {
@@ -422,14 +532,18 @@
           }, 2000);
         } else {
           showStatus(`❌ Failed to remove team: ${result.error || 'Unknown error'}`, 'error');
+          isLoading = false;
+          setAllButtonsLoading(false);
         }
       } catch (error) {
         showStatus('Failed to remove team: ' + error.message, 'error');
+        isLoading = false;
+        setAllButtonsLoading(false);
       }
     }
 
-    function copyBracketId() {
-      if (!bracketId) {
+    const copyBracketId = debounce(() => {
+      if (!bracketId || isLoading) {
         showStatus('No bracket ID to copy', 'error');
         return;
       }
@@ -445,7 +559,7 @@
         // Fallback for older browsers
         fallbackCopyTextToClipboard(bracketId);
       }
-    }
+    }, 500); // 500ms debounce
 
     function fallbackCopyTextToClipboard(text) {
       const textArea = document.createElement("textarea");
@@ -474,50 +588,59 @@
       document.body.removeChild(textArea);
     }
 
-    function downloadTeamInfo() {
-      if (!currentTeam) {
+    const downloadTeamInfo = debounce(() => {
+      if (!currentTeam || isLoading) {
         showStatus('No team data to download', 'error');
         return;
       }
 
-      const teamData = {
-        bracketId: currentTeam.bracketId,
-        rank: currentTeam.rank,
-        registrationDate: currentTeam.timestamp,
-        player1: {
-          robloxUsername: currentTeam.player1.roblox,
-          discordUsername: currentTeam.player1.discord,
-          rank: currentTeam.player1.rank || currentTeam.rank
-        },
-        player2: {
-          robloxUsername: currentTeam.player2.roblox,
-          discordUsername: currentTeam.player2.discord,
-          rank: currentTeam.player2.rank || currentTeam.rank
-        },
-        downloadedAt: new Date().toISOString(),
-        important: "⚠️ SAVE YOUR BRACKET ID! You need this to access your team dashboard."
-      };
+      try {
+        const teamData = {
+          bracketId: currentTeam.bracketId,
+          rank: currentTeam.rank,
+          registrationDate: currentTeam.timestamp,
+          player1: {
+            robloxUsername: currentTeam.player1.roblox,
+            discordUsername: currentTeam.player1.discord,
+            rank: currentTeam.player1.rank || currentTeam.rank
+          },
+          player2: {
+            robloxUsername: currentTeam.player2.roblox,
+            discordUsername: currentTeam.player2.discord,
+            rank: currentTeam.player2.rank || currentTeam.rank
+          },
+          downloadedAt: new Date().toISOString(),
+          important: "⚠️ SAVE YOUR BRACKET ID! You need this to access your team dashboard."
+        };
 
-      const jsonString = JSON.stringify(teamData, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `team-${currentTeam.bracketId}-info.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      URL.revokeObjectURL(url);
-      showStatus(`✅ Team info downloaded as team-${currentTeam.bracketId}-info.json`, 'success');
-    }
+        const jsonString = JSON.stringify(teamData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `team-${currentTeam.bracketId}-info.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        URL.revokeObjectURL(url);
+        showStatus(`✅ Team info downloaded as team-${currentTeam.bracketId}-info.json`, 'success');
+      } catch (error) {
+        showStatus('Failed to download team info: ' + error.message, 'error');
+      }
+    }, 1000); // 1 second debounce for downloads
 
     async function loadRankBracket() {
-      if (!currentTeam) return;
+      if (!currentTeam || isLoading) return;
+
+      const loadBtn = event.target;
 
       try {
+        isLoading = true;
+        setButtonLoading(loadBtn, true);
         showStatus('Loading bracket for your rank...', 'success');
+        
         const response = await fetch('/api/bracket');
         const data = await response.json();
         
@@ -567,18 +690,37 @@
         showStatus(`Loaded ${rankTeams.length} teams in ${currentTeam.rank} bracket`, 'success');
       } catch (error) {
         showStatus('Failed to load bracket: ' + error.message, 'error');
+      } finally {
+        isLoading = false;
+        setButtonLoading(loadBtn, false);
       }
     }
 
     function logout() {
+      if (isLoading) return; // Prevent logout during operations
+      
       currentTeam = null;
       bracketId = null;
+      isLoading = false;
+      
       sessionStorage.removeItem('teamAuthenticated');
       sessionStorage.removeItem('bracketId');
-      document.getElementById('loginOverlay').style.display = 'flex';
-      document.getElementById('dashboardContent').classList.remove('authenticated');
-      document.getElementById('bracketIdInput').value = '';
-      document.getElementById('bracket-view').style.display = 'none';
+      sessionStorage.removeItem('newSignupBracketId');
+      
+      // Smooth transition
+      const dashboardContent = document.getElementById('dashboardContent');
+      dashboardContent.style.opacity = '0';
+      
+      setTimeout(() => {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        dashboardContent.classList.remove('authenticated');
+        dashboardContent.style.opacity = '1';
+        document.getElementById('bracketIdInput').value = '';
+        document.getElementById('bracket-view').style.display = 'none';
+        
+        // Reset all buttons
+        setAllButtonsLoading(false);
+      }, 300);
     }
 
     // Check for existing authentication on page load
@@ -592,15 +734,17 @@
         authenticateTeam().then(() => {
           // Show welcome message for new signups
           if (isNewSignup === storedBracketId) {
-            showStatus(`🎉 Welcome to your team dashboard! Make sure to save your Bracket ID: ${storedBracketId}`, 'success');
-            sessionStorage.removeItem('newSignupBracketId'); // Clear the flag
+            setTimeout(() => {
+              showStatus(`🎉 Welcome to your team dashboard! Make sure to save your Bracket ID: ${storedBracketId}`, 'success');
+              sessionStorage.removeItem('newSignupBracketId'); // Clear the flag
+            }, 500); // Small delay to ensure UI is ready
           }
         });
       }
       
       // Allow Enter key to submit login
       document.getElementById('bracketIdInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !isLoading) {
           authenticateTeam();
         }
       });

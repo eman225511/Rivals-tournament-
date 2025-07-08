@@ -104,10 +104,32 @@
       color: #282843;
       cursor: pointer;
       transition: 0.3s;
+      position: relative;
     }
-    input[type="submit"]:hover {
+    input[type="submit"]:hover:not(:disabled) {
       background: #f9d900;
       box-shadow: 0 0 12px #f9d900aa;
+    }
+    input[type="submit"]:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #999;
+    }
+    input[type="submit"].loading {
+      color: transparent;
+    }
+    input[type="submit"].loading::after {
+      content: "⏳";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: #282843;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
     .honeypot {
       display: none !important;
@@ -210,25 +232,110 @@
   </div>
 
   <script>
+    let isLoading = false;
+    
     const acceptBtn = document.getElementById("acceptBtn");
     const checkboxes = document.querySelectorAll(".rule-check");
     const signupForm = document.getElementById("signupForm");
 
-    function showMessage(text, type = "success") {
-      const msgBox = document.getElementById("message");
-      msgBox.textContent = text;
-      msgBox.className = type === "error" ? "error" : "success";
-      msgBox.style.display = "block";
+    // Debounce function to prevent spam
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
 
+    // Set loading state for entire form
+    function setLoading(loading) {
+      isLoading = loading;
+      const submitButton = signupForm.querySelector('input[type="submit"]');
+      const allInputs = signupForm.querySelectorAll('input:not(.honeypot), select');
+      
+      if (submitButton) {
+        submitButton.disabled = loading;
+        submitButton.classList.toggle('loading', loading);
+        if (loading) {
+          submitButton.style.opacity = '0.6';
+          submitButton.style.cursor = 'not-allowed';
+        } else {
+          submitButton.style.opacity = '';
+          submitButton.style.cursor = '';
+        }
+      }
+      
+      // Disable/enable all form inputs
+      allInputs.forEach(input => {
+        input.disabled = loading;
+        input.style.opacity = loading ? '0.6' : '';
+        input.style.pointerEvents = loading ? 'none' : '';
+      });
+      
+      // Disable accept button during loading
+      if (loading) {
+        acceptBtn.disabled = true;
+        acceptBtn.style.opacity = '0.6';
+        acceptBtn.style.pointerEvents = 'none';
+      }
+    }
+
+    function showMessage(text, type = "success") {
+      // Remove existing messages
+      const existingMessage = document.querySelector('.status-message');
+      if (existingMessage) {
+        existingMessage.remove();
+      }
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `status-message ${type}`;
+      messageDiv.textContent = text;
+      messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        max-width: 90%;
+        text-align: center;
+        font-weight: 600;
+      `;
+      
+      document.body.appendChild(messageDiv);
+      
+      // Trigger fade-in animation
       setTimeout(() => {
-        msgBox.style.display = "none";
-        msgBox.textContent = "";
-      }, 7000);
+        messageDiv.style.opacity = '1';
+      }, 10);
+      
+      // Auto-remove after delay
+      const delay = type === 'success' ? 3000 : 5000;
+      setTimeout(() => {
+        messageDiv.style.opacity = '0';
+        setTimeout(() => {
+          if (messageDiv.parentNode) {
+            messageDiv.remove();
+          }
+        }, 300);
+      }, delay);
     }
 
     // Rule checkboxes enable accept button when all checked
     checkboxes.forEach(cb => {
       cb.addEventListener("change", () => {
+        if (isLoading) return;
+        
         const allChecked = [...checkboxes].every(box => box.checked);
         acceptBtn.disabled = !allChecked;
         if (allChecked) {
@@ -242,8 +349,9 @@
     });
 
     // After accepting rules, enable form inputs & disable accept button
-    acceptBtn.addEventListener("click", () => {
-      if (acceptBtn.disabled) return;
+    const debouncedAccept = debounce(() => {
+      if (isLoading || acceptBtn.disabled) return;
+      
       acceptBtn.textContent = "✅ Rules Acknowledged";
       acceptBtn.disabled = true;
       acceptBtn.classList.remove("enabled");
@@ -255,7 +363,12 @@
       checkboxes.forEach(cb => cb.disabled = true);
       // Stop glowing animation on rules box
       document.getElementById("rulesBox").style.animation = "none";
-    });
+      
+      // Smooth scroll to form
+      signupForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+
+    acceptBtn.addEventListener("click", debouncedAccept);
 
     // Initially disable form inputs except honeypot
     window.addEventListener("DOMContentLoaded", () => {
@@ -264,9 +377,12 @@
       });
     });
 
-    signupForm.addEventListener("submit", async (e) => {
+    const debouncedSubmit = debounce(async (e) => {
       e.preventDefault();
 
+      if (isLoading) return;
+
+      // Honeypot check
       if (signupForm.querySelector('input[name="extra_field"]').value !== "") return;
 
       const formData = {
@@ -279,10 +395,24 @@
         extra_field: "" // honeypot
       };
 
+      // Validation
+      if (!formData.discord || !formData.roblox || !formData.rank || 
+          !formData.duo_discord || !formData.duo_roblox || !formData.duo_rank) {
+        showMessage("❌ Please fill in all fields!", "error");
+        return;
+      }
+
+      if (formData.discord === formData.duo_discord || formData.roblox === formData.duo_roblox) {
+        showMessage("❌ Player names must be different!", "error");
+        return;
+      }
+
       if (formData.rank !== formData.duo_rank) {
         showMessage("❌ Both players must have the SAME rank!", "error");
         return;
       }
+
+      setLoading(true);
 
       try {
         const res = await fetch("/api/signup", {
@@ -293,25 +423,29 @@
         const result = await res.json();
 
         if (res.ok && result.success) {
-          showMessage(`✅ You're signed up! Your Bracket ID: ${result.bracketId}. Redirecting to dashboard...`);
+          showMessage(`✅ You're signed up! Your Bracket ID: ${result.bracketId}. Redirecting to dashboard...`, "success");
           
           // Store the bracket ID for automatic login to dashboard
           sessionStorage.setItem('newSignupBracketId', result.bracketId);
           sessionStorage.setItem('teamAuthenticated', 'true');
           sessionStorage.setItem('bracketId', result.bracketId);
           
-          // Redirect to dashboard after a short delay to show the success message
+          // Redirect to dashboard after a delay to show the success message
           setTimeout(() => {
             window.location.href = 'dashboard.html';
-          }, 2000);
+          }, 2500);
         } else {
           showMessage(`⚠️ Error: ${result.error || "Unknown error"}`, "error");
         }
       } catch (err) {
-        showMessage("❌ Could not connect to server.", "error");
+        showMessage("❌ Could not connect to server. Please check your internet connection.", "error");
         console.error(err);
+      } finally {
+        setLoading(false);
       }
-    });
+    }, 500);
+
+    signupForm.addEventListener("submit", debouncedSubmit);
   </script>
 </body>
 </html>

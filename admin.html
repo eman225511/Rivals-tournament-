@@ -67,11 +67,24 @@
       font-weight: 600;
       cursor: pointer;
       margin: 5px;
-      transition: 0.3s;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
     }
     .btn:hover {
       background: #f9d900;
       box-shadow: 0 0 8px #f9d900aa;
+      transform: translateY(-1px);
+    }
+    .btn:disabled {
+      background: #666;
+      color: #999;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
     .btn.danger {
       background: #dc3545;
@@ -80,21 +93,60 @@
     .btn.danger:hover {
       background: #c82333;
     }
+    .btn.danger:disabled {
+      background: #666;
+      color: #999;
+    }
+    .btn.loading {
+      color: transparent;
+    }
+    .btn.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 16px;
+      height: 16px;
+      border: 2px solid #666;
+      border-top: 2px solid #282843;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .btn.danger.loading::after {
+      border: 2px solid #999;
+      border-top: 2px solid white;
+    }
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
     #status {
-      padding: 10px;
-      border-radius: 5px;
-      margin: 10px 0;
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin: 15px 0;
       display: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translateY(-10px);
+      border-left: 4px solid transparent;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    #status.show {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
     }
     #status.success {
-      background: #d4edda;
+      background: linear-gradient(135deg, #d4edda, #c3e6cb);
       color: #155724;
-      border: 1px solid #c3e6cb;
+      border-left-color: #28a745;
     }
     #status.error {
-      background: #f8d7da;
+      background: linear-gradient(135deg, #f8d7da, #f5c6cb);
       color: #721c24;
-      border: 1px solid #f5c6cb;
+      border-left-color: #dc3545;
     }
     .data-preview {
       background: #1a1a2e;
@@ -152,10 +204,35 @@
       cursor: pointer;
       font-size: 1rem;
       margin-top: 10px;
-      transition: 0.3s;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
-    .login-btn:hover {
+    .login-btn:hover:not(:disabled) {
       background: #f9d900;
+      transform: translateY(-1px);
+    }
+    .login-btn:disabled {
+      background: #666;
+      color: #999;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .login-btn.loading {
+      color: transparent;
+    }
+    .login-btn.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 16px;
+      height: 16px;
+      border: 2px solid #999;
+      border-top: 2px solid #282843;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
     .admin-content {
       display: none;
@@ -172,7 +249,7 @@
       <h2>🔐 Admin Authentication</h2>
       <p style="color: #ccc; margin-bottom: 20px;">Enter the admin key to access the admin panel</p>
       <input type="password" id="adminKeyInput" class="login-input" placeholder="Admin Key" />
-      <button class="login-btn" onclick="authenticateAdmin()">🚀 Login</button>
+      <button class="login-btn" onclick="debounce(() => authenticateAdmin(), 300, 'loginBtn')">🚀 Login</button>
       <div id="loginError" style="color: #dc3545; margin-top: 10px; display: none;"></div>
       <div style="margin-top: 20px;">
         <a href="index.html" style="color: #ffd43b; text-decoration: none;">← Back to Signup</a>
@@ -195,30 +272,30 @@
 
     <div class="admin-section">
       <h3>📊 Storage Status</h3>
-      <button class="btn" onclick="checkGitHubStatus()">🔍 Check GitHub Connection</button>
-      <button class="btn" onclick="loadData()">📥 Load Current Data</button>
+      <button class="btn" onclick="debounce(() => checkGitHubStatus(), 500, 'checkGitHubStatusBtn')">🔍 Check GitHub Connection</button>
+      <button class="btn" onclick="debounce(() => loadData(), 500, 'loadDataBtn')">📥 Load Current Data</button>
       <div id="github-status"></div>
     </div>
 
     <div class="admin-section">
       <h3>📋 Current Tournament Data</h3>
-      <button class="btn" onclick="refreshData()">🔄 Refresh Data</button>
-      <button class="btn" onclick="downloadBackup()">💾 Download Backup</button>
-      <button class="btn" onclick="testAPI()">🧪 Test API Endpoints</button>
+      <button class="btn" onclick="debounce(() => refreshData(), 1000, 'refreshDataBtn')">🔄 Refresh Data</button>
+      <button class="btn" onclick="debounce(() => downloadBackup(), 1000, 'downloadBackupBtn')">💾 Download Backup</button>
+      <button class="btn" onclick="debounce(() => testAPI(), 1000, 'testAPIBtn')">🧪 Test API Endpoints</button>
       <div id="data-count"></div>
       <div id="data-preview" class="data-preview" style="display: none;"></div>
     </div>
 
     <div class="admin-section">
       <h3>🔧 Admin Tools</h3>
-      <button class="btn" onclick="generateTestData()">🎯 Generate Test Data</button>
-      <button class="btn" onclick="validateData()">✅ Validate Data Integrity</button>
+      <button class="btn" onclick="debounce(() => generateTestData(), 500, 'generateTestDataBtn')">🎯 Generate Test Data</button>
+      <button class="btn" onclick="debounce(() => validateData(), 1000, 'validateDataBtn')">✅ Validate Data Integrity</button>
       <div id="admin-tools-output"></div>
     </div>
 
     <div class="admin-section">
       <h3>⚠️ Danger Zone</h3>
-      <button class="btn danger" onclick="clearAllData()">🗑️ Clear All Tournament Data</button>
+      <button class="btn danger" onclick="debounce(() => clearAllData(), 500, 'clearAllDataBtn')">🗑️ Clear All Tournament Data</button>
       <p style="color: #dc3545; font-size: 0.9rem;">
         ⚠️ This will permanently delete all signup data from GitHub!
       </p>
@@ -228,23 +305,75 @@
 
   <script>
     let adminKey = null;
+    let isLoading = false; // Global loading state
+    let debounceTimeouts = {}; // Track debounce timeouts
+
+    // Utility function to debounce actions
+    function debounce(func, delay, key) {
+      if (debounceTimeouts[key]) {
+        clearTimeout(debounceTimeouts[key]);
+      }
+      debounceTimeouts[key] = setTimeout(() => {
+        func();
+        delete debounceTimeouts[key];
+      }, delay);
+    }
+
+    // Utility function to disable all buttons during loading
+    function setLoadingState(loading, excludeButtons = []) {
+      isLoading = loading;
+      const buttons = document.querySelectorAll('.btn, .login-btn');
+      const inputs = document.querySelectorAll('.login-input');
+      
+      buttons.forEach(button => {
+        if (!excludeButtons.includes(button.id)) {
+          button.disabled = loading;
+          if (loading) {
+            button.classList.add('loading');
+          } else {
+            button.classList.remove('loading');
+          }
+        }
+      });
+
+      inputs.forEach(input => {
+        input.disabled = loading;
+      });
+    }
 
     function showLoginError(message) {
       const errorDiv = document.getElementById('loginError');
       errorDiv.textContent = message;
       errorDiv.style.display = 'block';
+      errorDiv.style.opacity = '0';
+      errorDiv.style.transform = 'translateY(-10px)';
+      
       setTimeout(() => {
-        errorDiv.style.display = 'none';
+        errorDiv.style.transition = 'all 0.3s ease';
+        errorDiv.style.opacity = '1';
+        errorDiv.style.transform = 'translateY(0)';
+      }, 10);
+      
+      setTimeout(() => {
+        errorDiv.style.opacity = '0';
+        errorDiv.style.transform = 'translateY(-10px)';
+        setTimeout(() => {
+          errorDiv.style.display = 'none';
+        }, 300);
       }, 5000);
     }
 
     async function authenticateAdmin() {
+      if (isLoading) return;
+      
       const inputKey = document.getElementById('adminKeyInput').value.trim();
       
       if (!inputKey) {
         showLoginError('Please enter an admin key');
         return;
       }
+
+      setLoadingState(true);
 
       try {
         // Test the admin key by making a request to the admin API
@@ -258,33 +387,73 @@
         if (response.ok) {
           // Authentication successful
           adminKey = inputKey;
-          document.getElementById('loginOverlay').style.display = 'none';
-          document.getElementById('adminContent').classList.add('authenticated');
+          
+          // Smooth transition to admin panel
+          const overlay = document.getElementById('loginOverlay');
+          overlay.style.transition = 'opacity 0.3s ease';
+          overlay.style.opacity = '0';
+          
+          setTimeout(() => {
+            overlay.style.display = 'none';
+            const adminContent = document.getElementById('adminContent');
+            adminContent.classList.add('authenticated');
+            adminContent.style.opacity = '0';
+            adminContent.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+              adminContent.style.transition = 'all 0.3s ease';
+              adminContent.style.opacity = '1';
+              adminContent.style.transform = 'translateY(0)';
+            }, 10);
+          }, 300);
           
           // Store in session (optional, for convenience)
           sessionStorage.setItem('adminAuthenticated', 'true');
           sessionStorage.setItem('adminKey', inputKey);
           
-          // Load initial data
-          loadData();
-          checkGitHubStatus();
+          // Load initial data after transition
+          setTimeout(() => {
+            loadData();
+            checkGitHubStatus();
+          }, 400);
         } else {
           const result = await response.json();
           showLoginError(result.error || 'Invalid admin key');
         }
       } catch (error) {
         showLoginError('Authentication failed: ' + error.message);
+      } finally {
+        setLoadingState(false);
       }
     }
 
     function logout() {
+      if (isLoading) return;
+      
       if (confirm('Are you sure you want to logout?')) {
         adminKey = null;
         sessionStorage.removeItem('adminAuthenticated');
         sessionStorage.removeItem('adminKey');
-        document.getElementById('loginOverlay').style.display = 'flex';
-        document.getElementById('adminContent').classList.remove('authenticated');
-        document.getElementById('adminKeyInput').value = '';
+        
+        // Smooth transition back to login
+        const adminContent = document.getElementById('adminContent');
+        adminContent.style.transition = 'all 0.3s ease';
+        adminContent.style.opacity = '0';
+        adminContent.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+          adminContent.classList.remove('authenticated');
+          const overlay = document.getElementById('loginOverlay');
+          overlay.style.display = 'flex';
+          overlay.style.opacity = '0';
+          
+          setTimeout(() => {
+            overlay.style.transition = 'opacity 0.3s ease';
+            overlay.style.opacity = '1';
+          }, 10);
+          
+          document.getElementById('adminKeyInput').value = '';
+        }, 300);
       }
     }
 
@@ -301,7 +470,7 @@
       // Allow Enter key to submit login
       document.getElementById('adminKeyInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-          authenticateAdmin();
+          debounce(() => authenticateAdmin(), 300, 'enterKeyLogin');
         }
       });
     });
@@ -329,86 +498,126 @@
         logout();
       }
     }
-    function showStatus(message, type = 'success') {
+    function showStatus(message, type = 'success', duration = null) {
       const status = document.getElementById('status');
       status.textContent = message;
       status.className = type;
+      
+      // Reset any previous transitions
+      status.style.transition = 'none';
+      status.style.opacity = '0';
+      status.style.transform = 'translateY(-10px)';
       status.style.display = 'block';
+      
+      // Trigger smooth fade-in
       setTimeout(() => {
-        status.style.display = 'none';
-      }, 5000);
+        status.style.transition = 'all 0.3s ease';
+        status.classList.add('show');
+      }, 10);
+      
+      // Auto-hide after specified duration
+      const autoHideDuration = duration || (type === 'error' ? 8000 : 5000);
+      setTimeout(() => {
+        status.style.opacity = '0';
+        status.style.transform = 'translateY(-10px)';
+        setTimeout(() => {
+          status.classList.remove('show');
+          status.style.display = 'none';
+        }, 300);
+      }, autoHideDuration);
+      
+      // Auto-scroll to status message
+      setTimeout(() => {
+        status.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
     }
 
     async function checkGitHubStatus() {
-      try {
-        showStatus('Checking GitHub connection...', 'success');
-        const response = await fetch('/api/bracket');
+      if (isLoading) return;
+      
+      debounce(async () => {
+        setLoadingState(true);
         
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        try {
+          showStatus('Checking GitHub connection...', 'success');
+          const response = await fetch('/api/bracket');
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          document.getElementById('github-status').innerHTML = `
+            <p style="color: #28a745;">✅ API Connection: Working</p>
+            <p>Current entries: ${Object.keys(data).length}</p>
+            <p>Last checked: ${new Date().toLocaleTimeString()}</p>
+          `;
+          showStatus('GitHub connection is working!', 'success');
+        } catch (error) {
+          document.getElementById('github-status').innerHTML = `
+            <p style="color: #dc3545;">❌ API Connection: Failed</p>
+            <p>Error: ${error.message}</p>
+            <p>Last checked: ${new Date().toLocaleTimeString()}</p>
+          `;
+          showStatus('GitHub connection failed: ' + error.message, 'error');
+          console.error('GitHub status check failed:', error);
+        } finally {
+          setLoadingState(false);
         }
-        
-        const data = await response.json();
-        
-        document.getElementById('github-status').innerHTML = `
-          <p style="color: #28a745;">✅ API Connection: Working</p>
-          <p>Current entries: ${Object.keys(data).length}</p>
-          <p>Last checked: ${new Date().toLocaleTimeString()}</p>
-        `;
-        showStatus('GitHub connection is working!', 'success');
-      } catch (error) {
-        document.getElementById('github-status').innerHTML = `
-          <p style="color: #dc3545;">❌ API Connection: Failed</p>
-          <p>Error: ${error.message}</p>
-          <p>Last checked: ${new Date().toLocaleTimeString()}</p>
-        `;
-        showStatus('GitHub connection failed: ' + error.message, 'error');
-        console.error('GitHub status check failed:', error);
-      }
+      }, 1000, 'checkGitHubStatus');
     }
 
     async function loadData() {
-      try {
-        showStatus('Loading data...', 'success');
-        const response = await fetch('/api/bracket');
+      if (isLoading) return;
+      
+      debounce(async () => {
+        setLoadingState(true);
         
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        try {
+          showStatus('Loading data...', 'success');
+          const response = await fetch('/api/bracket');
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          console.log('Loaded data:', data);
+          
+          const count = Object.keys(data).length;
+          
+          // Group by rank for better display
+          const rankGroups = {};
+          Object.entries(data).forEach(([id, entry]) => {
+            const rank = entry.rank || 'Unknown';
+            if (!rankGroups[rank]) rankGroups[rank] = [];
+            rankGroups[rank].push(entry);
+          });
+          
+          let rankInfo = '';
+          Object.entries(rankGroups).forEach(([rank, teams]) => {
+            rankInfo += `<li><strong>${rank}:</strong> ${teams.length} team${teams.length !== 1 ? 's' : ''}</li>`;
+          });
+          
+          document.getElementById('data-count').innerHTML = `
+            <p><strong>Total Teams:</strong> ${count}</p>
+            <div style="margin: 10px 0;">
+              <strong>By Rank:</strong>
+              <ul style="margin: 5px 0; padding-left: 20px;">${rankInfo || '<li>No teams</li>'}</ul>
+            </div>
+            <button class="btn" onclick="toggleDataPreview()">👁️ Show/Hide Raw Data</button>
+          `;
+          
+          document.getElementById('data-preview').textContent = JSON.stringify(data, null, 2);
+          showStatus(`Loaded ${count} tournament entries`, 'success');
+        } catch (error) {
+          showStatus('Failed to load data: ' + error.message, 'error');
+          console.error('Load data failed:', error);
+        } finally {
+          setLoadingState(false);
         }
-        
-        const data = await response.json();
-        console.log('Loaded data:', data);
-        
-        const count = Object.keys(data).length;
-        
-        // Group by rank for better display
-        const rankGroups = {};
-        Object.entries(data).forEach(([id, entry]) => {
-          const rank = entry.rank || 'Unknown';
-          if (!rankGroups[rank]) rankGroups[rank] = [];
-          rankGroups[rank].push(entry);
-        });
-        
-        let rankInfo = '';
-        Object.entries(rankGroups).forEach(([rank, teams]) => {
-          rankInfo += `<li><strong>${rank}:</strong> ${teams.length} team${teams.length !== 1 ? 's' : ''}</li>`;
-        });
-        
-        document.getElementById('data-count').innerHTML = `
-          <p><strong>Total Teams:</strong> ${count}</p>
-          <div style="margin: 10px 0;">
-            <strong>By Rank:</strong>
-            <ul style="margin: 5px 0; padding-left: 20px;">${rankInfo || '<li>No teams</li>'}</ul>
-          </div>
-          <button class="btn" onclick="toggleDataPreview()">👁️ Show/Hide Raw Data</button>
-        `;
-        
-        document.getElementById('data-preview').textContent = JSON.stringify(data, null, 2);
-        showStatus(`Loaded ${count} tournament entries`, 'success');
-      } catch (error) {
-        showStatus('Failed to load data: ' + error.message, 'error');
-        console.error('Load data failed:', error);
-      }
+      }, 500, 'loadData');
     }
 
     function toggleDataPreview() {
@@ -417,167 +626,207 @@
     }
 
     async function refreshData() {
-      await loadData();
-      await checkGitHubStatus();
+      if (isLoading) return;
+      
+      debounce(async () => {
+        await loadData();
+        await checkGitHubStatus();
+      }, 1000, 'refreshData');
     }
 
     async function testAPI() {
-      showStatus('Testing API endpoints...', 'success');
-      const tests = [
-        { name: 'Bracket API', url: '/api/bracket' },
-        { name: 'Brackets API', url: '/api/brackets' }
-      ];
-
-      for (const test of tests) {
+      if (isLoading) return;
+      
+      debounce(async () => {
+        setLoadingState(true);
+        
         try {
-          const response = await fetch(test.url);
-          const data = await response.json();
-          console.log(`${test.name} test:`, response.status, data);
-        } catch (error) {
-          console.error(`${test.name} failed:`, error);
+          showStatus('Testing API endpoints...', 'success');
+          const tests = [
+            { name: 'Bracket API', url: '/api/bracket' },
+            { name: 'Brackets API', url: '/api/brackets' }
+          ];
+
+          for (const test of tests) {
+            try {
+              const response = await fetch(test.url);
+              const data = await response.json();
+              console.log(`${test.name} test:`, response.status, data);
+            } catch (error) {
+              console.error(`${test.name} failed:`, error);
+            }
+          }
+          showStatus('API tests completed - check console for details', 'success');
+        } finally {
+          setLoadingState(false);
         }
-      }
-      showStatus('API tests completed - check console for details', 'success');
+      }, 1000, 'testAPI');
     }
 
     async function generateTestData() {
+      if (isLoading) return;
+      
       if (!confirm('Generate test tournament data? This will add sample teams.')) {
         return;
       }
 
-      try {
-        showStatus('Generating test data...', 'success');
+      debounce(async () => {
+        setLoadingState(true);
         
-        const testTeams = [
-          {
-            discord: 'TestPlayer1#1234',
-            roblox: 'TestRoblox1',
-            rank: 'Gold',
-            duo_discord: 'TestPlayer2#5678',
-            duo_roblox: 'TestRoblox2',
-            duo_rank: 'Gold'
-          },
-          {
-            discord: 'ProPlayer1#9999',
-            roblox: 'ProRoblox1',
-            rank: 'Diamond',
-            duo_discord: 'ProPlayer2#8888',
-            duo_roblox: 'ProRoblox2',
-            duo_rank: 'Diamond'
-          }
-        ];
-
-        for (const team of testTeams) {
-          const response = await fetch('/api/signup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...team, extra_field: '' })
-          });
+        try {
+          showStatus('Generating test data...', 'success');
           
-          if (!response.ok) {
-            console.error('Failed to create test team:', await response.text());
+          const testTeams = [
+            {
+              discord: 'TestPlayer1#1234',
+              roblox: 'TestRoblox1',
+              rank: 'Gold',
+              duo_discord: 'TestPlayer2#5678',
+              duo_roblox: 'TestRoblox2',
+              duo_rank: 'Gold'
+            },
+            {
+              discord: 'ProPlayer1#9999',
+              roblox: 'ProRoblox1',
+              rank: 'Diamond',
+              duo_discord: 'ProPlayer2#8888',
+              duo_roblox: 'ProRoblox2',
+              duo_rank: 'Diamond'
+            }
+          ];
+
+          for (const team of testTeams) {
+            const response = await fetch('/api/signup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...team, extra_field: '' })
+            });
+            
+            if (!response.ok) {
+              console.error('Failed to create test team:', await response.text());
+            }
           }
+          
+          showStatus('Test data generated successfully!', 'success');
+          await loadData();
+        } catch (error) {
+          showStatus('Failed to generate test data: ' + error.message, 'error');
+        } finally {
+          setLoadingState(false);
         }
-        
-        showStatus('Test data generated successfully!', 'success');
-        await loadData();
-      } catch (error) {
-        showStatus('Failed to generate test data: ' + error.message, 'error');
-      }
+      }, 500, 'generateTestData');
     }
 
     async function validateData() {
-      try {
-        showStatus('Validating data integrity...', 'success');
-        const response = await fetch('/api/bracket');
-        const data = await response.json();
+      if (isLoading) return;
+      
+      debounce(async () => {
+        setLoadingState(true);
         
-        let issues = [];
-        let validCount = 0;
-        
-        Object.entries(data).forEach(([id, entry]) => {
-          // Check required fields
-          if (!entry.bracketId || !entry.rank || !entry.player1 || !entry.player2) {
-            issues.push(`${id}: Missing required fields`);
-          }
-          // Check rank consistency
-          else if (entry.player1.rank && entry.player2.rank && entry.player1.rank !== entry.player2.rank) {
-            issues.push(`${id}: Player ranks don't match`);
-          }
-          // Check for valid discord usernames
-          else if (!entry.player1.discord || !entry.player2.discord) {
-            issues.push(`${id}: Missing Discord usernames`);
-          }
-          else {
-            validCount++;
-          }
-        });
-        
-        const output = document.getElementById('admin-tools-output');
-        output.innerHTML = `
-          <div style="margin-top: 15px; padding: 15px; background: #1a1a2e; border-radius: 8px;">
-            <h4 style="color: #ffd43b; margin-top: 0;">Data Validation Results</h4>
-            <p><strong>Total Entries:</strong> ${Object.keys(data).length}</p>
-            <p><strong>Valid Entries:</strong> ${validCount}</p>
-            <p><strong>Issues Found:</strong> ${issues.length}</p>
-            ${issues.length > 0 ? `
-              <div style="margin-top: 10px;">
-                <strong>Issues:</strong>
-                <ul style="margin: 5px 0; padding-left: 20px;">
-                  ${issues.map(issue => `<li style="color: #dc3545;">${issue}</li>`).join('')}
-                </ul>
-              </div>
-            ` : '<p style="color: #28a745;">✅ All data is valid!</p>'}
-          </div>
-        `;
-        
-        showStatus(`Validation complete: ${validCount} valid, ${issues.length} issues`, issues.length > 0 ? 'error' : 'success');
-      } catch (error) {
-        showStatus('Failed to validate data: ' + error.message, 'error');
-      }
+        try {
+          showStatus('Validating data integrity...', 'success');
+          const response = await fetch('/api/bracket');
+          const data = await response.json();
+          
+          let issues = [];
+          let validCount = 0;
+          
+          Object.entries(data).forEach(([id, entry]) => {
+            // Check required fields
+            if (!entry.bracketId || !entry.rank || !entry.player1 || !entry.player2) {
+              issues.push(`${id}: Missing required fields`);
+            }
+            // Check rank consistency
+            else if (entry.player1.rank && entry.player2.rank && entry.player1.rank !== entry.player2.rank) {
+              issues.push(`${id}: Player ranks don't match`);
+            }
+            // Check for valid discord usernames
+            else if (!entry.player1.discord || !entry.player2.discord) {
+              issues.push(`${id}: Missing Discord usernames`);
+            }
+            else {
+              validCount++;
+            }
+          });
+          
+          const output = document.getElementById('admin-tools-output');
+          output.innerHTML = `
+            <div style="margin-top: 15px; padding: 15px; background: #1a1a2e; border-radius: 8px;">
+              <h4 style="color: #ffd43b; margin-top: 0;">Data Validation Results</h4>
+              <p><strong>Total Entries:</strong> ${Object.keys(data).length}</p>
+              <p><strong>Valid Entries:</strong> ${validCount}</p>
+              <p><strong>Issues Found:</strong> ${issues.length}</p>
+              ${issues.length > 0 ? `
+                <div style="margin-top: 10px;">
+                  <strong>Issues:</strong>
+                  <ul style="margin: 5px 0; padding-left: 20px;">
+                    ${issues.map(issue => `<li style="color: #dc3545;">${issue}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : '<p style="color: #28a745;">✅ All data is valid!</p>'}
+            </div>
+          `;
+          
+          showStatus(`Validation complete: ${validCount} valid, ${issues.length} issues`, issues.length > 0 ? 'error' : 'success');
+        } catch (error) {
+          showStatus('Failed to validate data: ' + error.message, 'error');
+        } finally {
+          setLoadingState(false);
+        }
+      }, 1000, 'validateData');
     }
 
     async function downloadBackup() {
-      try {
-        showStatus('Preparing backup download...', 'success');
-        const response = await fetch('/api/bracket');
+      if (isLoading) return;
+      
+      debounce(async () => {
+        setLoadingState(true);
         
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        try {
+          showStatus('Preparing backup download...', 'success');
+          const response = await fetch('/api/bracket');
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          // Add metadata to backup
+          const backupData = {
+            metadata: {
+              exportDate: new Date().toISOString(),
+              totalTeams: Object.keys(data).length,
+              exportedBy: 'Admin Panel'
+            },
+            brackets: data
+          };
+          
+          const jsonString = JSON.stringify(backupData, null, 2);
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `tournament-backup-${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          URL.revokeObjectURL(url);
+          showStatus(`Backup downloaded successfully! (${Object.keys(data).length} teams)`, 'success');
+        } catch (error) {
+          showStatus('Failed to download backup: ' + error.message, 'error');
+          console.error('Download backup failed:', error);
+        } finally {
+          setLoadingState(false);
         }
-        
-        const data = await response.json();
-        
-        // Add metadata to backup
-        const backupData = {
-          metadata: {
-            exportDate: new Date().toISOString(),
-            totalTeams: Object.keys(data).length,
-            exportedBy: 'Admin Panel'
-          },
-          brackets: data
-        };
-        
-        const jsonString = JSON.stringify(backupData, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `tournament-backup-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        URL.revokeObjectURL(url);
-        showStatus(`Backup downloaded successfully! (${Object.keys(data).length} teams)`, 'success');
-      } catch (error) {
-        showStatus('Failed to download backup: ' + error.message, 'error');
-        console.error('Download backup failed:', error);
-      }
+      }, 1000, 'downloadBackup');
     }
 
     async function clearAllData() {
+      if (isLoading) return;
+      
       if (!adminKey) {
         showStatus('Authentication required', 'error');
         return;
@@ -591,30 +840,36 @@
         return;
       }
 
-      try {
-        showStatus('Clearing all data...', 'success');
-        const response = await fetch(`/api/admin?key=${encodeURIComponent(adminKey)}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Admin-Key': adminKey
+      debounce(async () => {
+        setLoadingState(true);
+        
+        try {
+          showStatus('Clearing all data...', 'success');
+          const response = await fetch(`/api/admin?key=${encodeURIComponent(adminKey)}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Admin-Key': adminKey
+            }
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            showStatus('✅ All tournament data has been cleared!', 'success');
+            // Refresh the data display
+            await loadData();
+            await checkGitHubStatus();
+          } else {
+            showStatus(`❌ Failed to clear data: ${result.error || 'Unknown error'}`, 'error');
           }
-        });
-
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-          showStatus('✅ All tournament data has been cleared!', 'success');
-          // Refresh the data display
-          await loadData();
-          await checkGitHubStatus();
-        } else {
-          showStatus(`❌ Failed to clear data: ${result.error || 'Unknown error'}`, 'error');
+        } catch (error) {
+          showStatus('Failed to clear data: ' + error.message, 'error');
+          console.error('Clear data failed:', error);
+        } finally {
+          setLoadingState(false);
         }
-      } catch (error) {
-        showStatus('Failed to clear data: ' + error.message, 'error');
-        console.error('Clear data failed:', error);
-      }
+      }, 500, 'clearAllData');
     }
   </script>
 </body>

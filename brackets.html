@@ -119,10 +119,32 @@
       color: #282843;
       display: block;
       transition: 0.3s;
+      position: relative;
     }
-    .download-btn:hover {
+    .download-btn:hover:not(:disabled) {
       background: #f9d900;
       box-shadow: 0 0 12px #f9d900aa;
+    }
+    .download-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #999;
+    }
+    .download-btn.loading {
+      color: transparent;
+    }
+    .download-btn.loading::after {
+      content: "⏳";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: #282843;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
     .rank-badge {
       display: inline-block;
@@ -167,6 +189,20 @@
 
   <script>
     let bracketsData = null;
+    let isLoading = false;
+
+    // Debounce function to prevent spam
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
 
     async function loadBrackets() {
       const loading = document.getElementById('loading');
@@ -176,6 +212,8 @@
       loading.style.display = 'block';
       container.innerHTML = '';
       downloadBtn.style.display = 'none';
+
+      isLoading = true;
 
       try {
         // Try the primary endpoint first, then fallback
@@ -281,28 +319,50 @@
           </div>
         `;
         console.error('Error loading brackets:', error);
+      } finally {
+        isLoading = false;
       }
     }
 
+    const debouncedRefresh = debounce(async () => {
+      if (isLoading) return;
+      await loadBrackets();
+    }, 1000);
+
     function refreshBrackets() {
-      loadBrackets();
+      debouncedRefresh();
     }
 
+    const debouncedDownload = debounce(() => {
+      if (!bracketsData || isLoading) return;
+      
+      const downloadBtn = document.getElementById('downloadBtn');
+      downloadBtn.disabled = true;
+      downloadBtn.classList.add('loading');
+      
+      try {
+        const jsonString = JSON.stringify(bracketsData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `tournament-brackets-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        URL.revokeObjectURL(url);
+      } finally {
+        setTimeout(() => {
+          downloadBtn.disabled = false;
+          downloadBtn.classList.remove('loading');
+        }, 1000);
+      }
+    }, 500);
+
     function downloadJson() {
-      if (!bracketsData) return;
-      
-      const jsonString = JSON.stringify(bracketsData, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `tournament-brackets-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      URL.revokeObjectURL(url);
+      debouncedDownload();
     }
 
     // Load brackets when page loads
