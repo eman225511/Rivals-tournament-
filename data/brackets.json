@@ -11,5 +11,18 @@
       "roblox": "SampleRoblox2"
     },
     "timestamp": "2025-01-08T12:00:00.000Z"
+  },
+  "BKT-COL2WC": {
+    "bracketId": "BKT-COL2WC",
+    "rank": "Diamond",
+    "player1": {
+      "discord": "eman",
+      "roblox": "dawda"
+    },
+    "player2": {
+      "discord": "dawda",
+      "roblox": "awdwd"
+    },
+    "timestamp": "2025-07-08T22:09:51.789Z"
   }
 }
