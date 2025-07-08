@@ -1,5 +1,9 @@
-// Simple in-memory storage (resets with each deployment)
-// In production, you'd want to use a database like Supabase, MongoDB, or similar
+// GitHub-based storage for brackets data
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // You'll need to set this in Vercel
+const GITHUB_REPO = 'eman225511/Rivals-tournament-'; // Your GitHub repo
+const GITHUB_FILE_PATH = 'data/brackets.json';
+
+// Simple in-memory storage as fallback
 let brackets = {};
 
 // Initialize with some sample data for testing
@@ -11,15 +15,98 @@ if (Object.keys(brackets).length === 0) {
       player1: { discord: 'SamplePlayer1#1234', roblox: 'SampleRoblox1' },
       player2: { discord: 'SamplePlayer2#5678', roblox: 'SampleRoblox2' },
       timestamp: new Date().toISOString()
-    },
-    'BKT-SAMPLE2': {
-      bracketId: 'BKT-SAMPLE2',
-      rank: 'Platinum',
-      player1: { discord: 'TestUser1#9999', roblox: 'TestRoblox1' },
-      player2: { discord: 'TestUser2#8888', roblox: 'TestRoblox2' },
-      timestamp: new Date().toISOString()
     }
   };
+}
+
+// Load brackets from GitHub
+async function loadBracketsFromGitHub() {
+  if (!GITHUB_TOKEN) {
+    console.log('No GitHub token, using in-memory storage');
+    return brackets;
+  }
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, {
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const content = Buffer.from(data.content, 'base64').toString('utf8');
+      const parsed = JSON.parse(content);
+      console.log('Loaded brackets from GitHub:', Object.keys(parsed).length, 'entries');
+      return parsed;
+    } else if (response.status === 404) {
+      console.log('Brackets file not found in GitHub, creating new one');
+      await saveBracketsToGitHub({});
+      return {};
+    } else {
+      console.error('Failed to load from GitHub:', response.status);
+      return brackets;
+    }
+  } catch (error) {
+    console.error('Error loading from GitHub:', error);
+    return brackets;
+  }
+}
+
+// Save brackets to GitHub
+async function saveBracketsToGitHub(bracketsData) {
+  if (!GITHUB_TOKEN) {
+    console.log('No GitHub token, skipping save');
+    return;
+  }
+
+  try {
+    // First, get the current file SHA (required for updates)
+    let sha = null;
+    const getResponse = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, {
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (getResponse.ok) {
+      const getData = await getResponse.json();
+      sha = getData.sha;
+    }
+
+    // Create or update the file
+    const content = Buffer.from(JSON.stringify(bracketsData, null, 2)).toString('base64');
+    
+    const updateData = {
+      message: `Update brackets data - ${new Date().toISOString()}`,
+      content: content,
+      branch: 'main' // or 'master' depending on your default branch
+    };
+
+    if (sha) {
+      updateData.sha = sha;
+    }
+
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    if (response.ok) {
+      console.log('Successfully saved brackets to GitHub');
+    } else {
+      console.error('Failed to save to GitHub:', response.status, await response.text());
+    }
+  } catch (error) {
+    console.error('Error saving to GitHub:', error);
+  }
 }
 
 function generateBracketId() {
@@ -50,13 +137,22 @@ export default async function handler(req, res) {
 
   const bracketId = generateBracketId();
 
-  brackets[bracketId] = {
+  // Load existing brackets from GitHub
+  const currentBrackets = await loadBracketsFromGitHub();
+
+  currentBrackets[bracketId] = {
     bracketId,
     rank,
     player1: { discord, roblox },
     player2: { discord: duo_discord, roblox: duo_roblox },
     timestamp: new Date().toISOString()
   };
+
+  // Save updated brackets to GitHub
+  await saveBracketsToGitHub(currentBrackets);
+
+  // Also update in-memory for immediate access
+  brackets = currentBrackets;
 
   // Send signup embed webhook
   const embedPayload = {
@@ -102,6 +198,8 @@ export default async function handler(req, res) {
 }
 
 // Export function to get brackets for api/brackets.js
-export function getBrackets() {
-  return brackets;
+export async function getBrackets() {
+  // Try to load fresh data from GitHub
+  const githubBrackets = await loadBracketsFromGitHub();
+  return githubBrackets;
 }
