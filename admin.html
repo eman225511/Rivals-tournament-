@@ -106,16 +106,90 @@
       max-height: 300px;
       overflow-y: auto;
     }
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .login-box {
+      background: #282843;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+    .login-box h2 {
+      color: #ffd43b;
+      margin-bottom: 20px;
+    }
+    .login-input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      background: #3a3a6f;
+      color: #eee;
+      font-size: 1rem;
+    }
+    .login-btn {
+      width: 100%;
+      background: #ffd43b;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      color: #282843;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-top: 10px;
+      transition: 0.3s;
+    }
+    .login-btn:hover {
+      background: #f9d900;
+    }
+    .admin-content {
+      display: none;
+    }
+    .admin-content.authenticated {
+      display: block;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🔧 Admin Panel</h1>
-    
-    <div class="nav-links">
-      <a href="index.html">🏠 Back to Signup</a>
-      <a href="brackets">🏆 View Brackets</a>
+  <!-- Login Overlay -->
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-box">
+      <h2>🔐 Admin Authentication</h2>
+      <p style="color: #ccc; margin-bottom: 20px;">Enter the admin key to access the admin panel</p>
+      <input type="password" id="adminKeyInput" class="login-input" placeholder="Admin Key" />
+      <button class="login-btn" onclick="authenticateAdmin()">🚀 Login</button>
+      <div id="loginError" style="color: #dc3545; margin-top: 10px; display: none;"></div>
+      <div style="margin-top: 20px;">
+        <a href="index.html" style="color: #ffd43b; text-decoration: none;">← Back to Signup</a>
+      </div>
     </div>
+  </div>
+
+  <!-- Main Admin Content (hidden until authenticated) -->
+  <div id="adminContent" class="admin-content">
+    <div class="container">
+      <h1>🔧 Admin Panel</h1>
+      
+      <div class="nav-links">
+        <a href="index.html">🏠 Back to Signup</a>
+        <a href="brackets">🏆 View Brackets</a>
+        <a href="#" onclick="logout()" style="color: #dc3545;">🚪 Logout</a>
+      </div>
 
     <div id="status"></div>
 
@@ -130,8 +204,16 @@
       <h3>📋 Current Tournament Data</h3>
       <button class="btn" onclick="refreshData()">🔄 Refresh Data</button>
       <button class="btn" onclick="downloadBackup()">💾 Download Backup</button>
+      <button class="btn" onclick="testAPI()">🧪 Test API Endpoints</button>
       <div id="data-count"></div>
       <div id="data-preview" class="data-preview" style="display: none;"></div>
+    </div>
+
+    <div class="admin-section">
+      <h3>🔧 Admin Tools</h3>
+      <button class="btn" onclick="generateTestData()">🎯 Generate Test Data</button>
+      <button class="btn" onclick="validateData()">✅ Validate Data Integrity</button>
+      <div id="admin-tools-output"></div>
     </div>
 
     <div class="admin-section">
@@ -142,8 +224,111 @@
       </p>
     </div>
   </div>
+  </div> <!-- End admin content -->
 
   <script>
+    let adminKey = null;
+
+    function showLoginError(message) {
+      const errorDiv = document.getElementById('loginError');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    async function authenticateAdmin() {
+      const inputKey = document.getElementById('adminKeyInput').value.trim();
+      
+      if (!inputKey) {
+        showLoginError('Please enter an admin key');
+        return;
+      }
+
+      try {
+        // Test the admin key by making a request to the admin API
+        const response = await fetch(`/api/admin?key=${encodeURIComponent(inputKey)}`, {
+          method: 'GET',
+          headers: {
+            'X-Admin-Key': inputKey
+          }
+        });
+
+        if (response.ok) {
+          // Authentication successful
+          adminKey = inputKey;
+          document.getElementById('loginOverlay').style.display = 'none';
+          document.getElementById('adminContent').classList.add('authenticated');
+          
+          // Store in session (optional, for convenience)
+          sessionStorage.setItem('adminAuthenticated', 'true');
+          sessionStorage.setItem('adminKey', inputKey);
+          
+          // Load initial data
+          loadData();
+          checkGitHubStatus();
+        } else {
+          const result = await response.json();
+          showLoginError(result.error || 'Invalid admin key');
+        }
+      } catch (error) {
+        showLoginError('Authentication failed: ' + error.message);
+      }
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        adminKey = null;
+        sessionStorage.removeItem('adminAuthenticated');
+        sessionStorage.removeItem('adminKey');
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('adminContent').classList.remove('authenticated');
+        document.getElementById('adminKeyInput').value = '';
+      }
+    }
+
+    // Check for existing authentication on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const isAuthenticated = sessionStorage.getItem('adminAuthenticated');
+      const storedKey = sessionStorage.getItem('adminKey');
+      
+      if (isAuthenticated === 'true' && storedKey) {
+        // Verify the stored key is still valid
+        authenticateWithStoredKey(storedKey);
+      }
+      
+      // Allow Enter key to submit login
+      document.getElementById('adminKeyInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          authenticateAdmin();
+        }
+      });
+    });
+
+    async function authenticateWithStoredKey(key) {
+      try {
+        const response = await fetch(`/api/admin?key=${encodeURIComponent(key)}`, {
+          method: 'GET',
+          headers: {
+            'X-Admin-Key': key
+          }
+        });
+
+        if (response.ok) {
+          adminKey = key;
+          document.getElementById('loginOverlay').style.display = 'none';
+          document.getElementById('adminContent').classList.add('authenticated');
+          loadData();
+          checkGitHubStatus();
+        } else {
+          // Stored key is invalid, clear it
+          logout();
+        }
+      } catch (error) {
+        logout();
+      }
+    }
     function showStatus(message, type = 'success') {
       const status = document.getElementById('status');
       status.textContent = message;
@@ -156,31 +341,65 @@
 
     async function checkGitHubStatus() {
       try {
+        showStatus('Checking GitHub connection...', 'success');
         const response = await fetch('/api/bracket');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
         document.getElementById('github-status').innerHTML = `
           <p style="color: #28a745;">✅ API Connection: Working</p>
           <p>Current entries: ${Object.keys(data).length}</p>
+          <p>Last checked: ${new Date().toLocaleTimeString()}</p>
         `;
         showStatus('GitHub connection is working!', 'success');
       } catch (error) {
         document.getElementById('github-status').innerHTML = `
           <p style="color: #dc3545;">❌ API Connection: Failed</p>
           <p>Error: ${error.message}</p>
+          <p>Last checked: ${new Date().toLocaleTimeString()}</p>
         `;
-        showStatus('GitHub connection failed!', 'error');
+        showStatus('GitHub connection failed: ' + error.message, 'error');
+        console.error('GitHub status check failed:', error);
       }
     }
 
     async function loadData() {
       try {
+        showStatus('Loading data...', 'success');
         const response = await fetch('/api/bracket');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
+        console.log('Loaded data:', data);
         
         const count = Object.keys(data).length;
+        
+        // Group by rank for better display
+        const rankGroups = {};
+        Object.entries(data).forEach(([id, entry]) => {
+          const rank = entry.rank || 'Unknown';
+          if (!rankGroups[rank]) rankGroups[rank] = [];
+          rankGroups[rank].push(entry);
+        });
+        
+        let rankInfo = '';
+        Object.entries(rankGroups).forEach(([rank, teams]) => {
+          rankInfo += `<li><strong>${rank}:</strong> ${teams.length} team${teams.length !== 1 ? 's' : ''}</li>`;
+        });
+        
         document.getElementById('data-count').innerHTML = `
           <p><strong>Total Teams:</strong> ${count}</p>
+          <div style="margin: 10px 0;">
+            <strong>By Rank:</strong>
+            <ul style="margin: 5px 0; padding-left: 20px;">${rankInfo || '<li>No teams</li>'}</ul>
+          </div>
           <button class="btn" onclick="toggleDataPreview()">👁️ Show/Hide Raw Data</button>
         `;
         
@@ -188,6 +407,7 @@
         showStatus(`Loaded ${count} tournament entries`, 'success');
       } catch (error) {
         showStatus('Failed to load data: ' + error.message, 'error');
+        console.error('Load data failed:', error);
       }
     }
 
@@ -198,14 +418,147 @@
 
     async function refreshData() {
       await loadData();
+      await checkGitHubStatus();
+    }
+
+    async function testAPI() {
+      showStatus('Testing API endpoints...', 'success');
+      const tests = [
+        { name: 'Bracket API', url: '/api/bracket' },
+        { name: 'Brackets API', url: '/api/brackets' }
+      ];
+
+      for (const test of tests) {
+        try {
+          const response = await fetch(test.url);
+          const data = await response.json();
+          console.log(`${test.name} test:`, response.status, data);
+        } catch (error) {
+          console.error(`${test.name} failed:`, error);
+        }
+      }
+      showStatus('API tests completed - check console for details', 'success');
+    }
+
+    async function generateTestData() {
+      if (!confirm('Generate test tournament data? This will add sample teams.')) {
+        return;
+      }
+
+      try {
+        showStatus('Generating test data...', 'success');
+        
+        const testTeams = [
+          {
+            discord: 'TestPlayer1#1234',
+            roblox: 'TestRoblox1',
+            rank: 'Gold',
+            duo_discord: 'TestPlayer2#5678',
+            duo_roblox: 'TestRoblox2',
+            duo_rank: 'Gold'
+          },
+          {
+            discord: 'ProPlayer1#9999',
+            roblox: 'ProRoblox1',
+            rank: 'Diamond',
+            duo_discord: 'ProPlayer2#8888',
+            duo_roblox: 'ProRoblox2',
+            duo_rank: 'Diamond'
+          }
+        ];
+
+        for (const team of testTeams) {
+          const response = await fetch('/api/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...team, extra_field: '' })
+          });
+          
+          if (!response.ok) {
+            console.error('Failed to create test team:', await response.text());
+          }
+        }
+        
+        showStatus('Test data generated successfully!', 'success');
+        await loadData();
+      } catch (error) {
+        showStatus('Failed to generate test data: ' + error.message, 'error');
+      }
+    }
+
+    async function validateData() {
+      try {
+        showStatus('Validating data integrity...', 'success');
+        const response = await fetch('/api/bracket');
+        const data = await response.json();
+        
+        let issues = [];
+        let validCount = 0;
+        
+        Object.entries(data).forEach(([id, entry]) => {
+          // Check required fields
+          if (!entry.bracketId || !entry.rank || !entry.player1 || !entry.player2) {
+            issues.push(`${id}: Missing required fields`);
+          }
+          // Check rank consistency
+          else if (entry.player1.rank && entry.player2.rank && entry.player1.rank !== entry.player2.rank) {
+            issues.push(`${id}: Player ranks don't match`);
+          }
+          // Check for valid discord usernames
+          else if (!entry.player1.discord || !entry.player2.discord) {
+            issues.push(`${id}: Missing Discord usernames`);
+          }
+          else {
+            validCount++;
+          }
+        });
+        
+        const output = document.getElementById('admin-tools-output');
+        output.innerHTML = `
+          <div style="margin-top: 15px; padding: 15px; background: #1a1a2e; border-radius: 8px;">
+            <h4 style="color: #ffd43b; margin-top: 0;">Data Validation Results</h4>
+            <p><strong>Total Entries:</strong> ${Object.keys(data).length}</p>
+            <p><strong>Valid Entries:</strong> ${validCount}</p>
+            <p><strong>Issues Found:</strong> ${issues.length}</p>
+            ${issues.length > 0 ? `
+              <div style="margin-top: 10px;">
+                <strong>Issues:</strong>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                  ${issues.map(issue => `<li style="color: #dc3545;">${issue}</li>`).join('')}
+                </ul>
+              </div>
+            ` : '<p style="color: #28a745;">✅ All data is valid!</p>'}
+          </div>
+        `;
+        
+        showStatus(`Validation complete: ${validCount} valid, ${issues.length} issues`, issues.length > 0 ? 'error' : 'success');
+      } catch (error) {
+        showStatus('Failed to validate data: ' + error.message, 'error');
+      }
     }
 
     async function downloadBackup() {
       try {
+        showStatus('Preparing backup download...', 'success');
         const response = await fetch('/api/bracket');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
-        const jsonString = JSON.stringify(data, null, 2);
+        // Add metadata to backup
+        const backupData = {
+          metadata: {
+            exportDate: new Date().toISOString(),
+            totalTeams: Object.keys(data).length,
+            exportedBy: 'Admin Panel'
+          },
+          brackets: data
+        };
+        
+        const jsonString = JSON.stringify(backupData, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
@@ -217,13 +570,19 @@
         document.body.removeChild(link);
         
         URL.revokeObjectURL(url);
-        showStatus('Backup downloaded successfully!', 'success');
+        showStatus(`Backup downloaded successfully! (${Object.keys(data).length} teams)`, 'success');
       } catch (error) {
         showStatus('Failed to download backup: ' + error.message, 'error');
+        console.error('Download backup failed:', error);
       }
     }
 
     async function clearAllData() {
+      if (!adminKey) {
+        showStatus('Authentication required', 'error');
+        return;
+      }
+      
       if (!confirm('⚠️ Are you sure you want to delete ALL tournament data? This cannot be undone!')) {
         return;
       }
@@ -233,18 +592,30 @@
       }
 
       try {
-        // This would require a special admin endpoint to clear data
-        showStatus('Clear data functionality would need a special admin API endpoint', 'error');
+        showStatus('Clearing all data...', 'success');
+        const response = await fetch(`/api/admin?key=${encodeURIComponent(adminKey)}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Key': adminKey
+          }
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          showStatus('✅ All tournament data has been cleared!', 'success');
+          // Refresh the data display
+          await loadData();
+          await checkGitHubStatus();
+        } else {
+          showStatus(`❌ Failed to clear data: ${result.error || 'Unknown error'}`, 'error');
+        }
       } catch (error) {
         showStatus('Failed to clear data: ' + error.message, 'error');
+        console.error('Clear data failed:', error);
       }
     }
-
-    // Load data on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      loadData();
-      checkGitHubStatus();
-    });
   </script>
 </body>
 </html>

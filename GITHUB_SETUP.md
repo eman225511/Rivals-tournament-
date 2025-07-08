@@ -13,16 +13,20 @@ This tournament app uses GitHub as a storage backend for brackets data. Follow t
 5. Click "Generate token"
 6. **Copy the token immediately** (you won't see it again!)
 
-## 2. Set up Vercel Environment Variable
+## 2. Set up Vercel Environment Variables
 
 1. Go to your Vercel dashboard
 2. Select your project (rivals-tournament)
 3. Go to Settings > Environment Variables
-4. Add a new variable:
+4. Add these variables:
    - **Name**: `GITHUB_TOKEN`
    - **Value**: Your GitHub token from step 1
    - **Environment**: Production, Preview, Development (all)
-5. Click "Save"
+   
+   - **Name**: `ADMIN_KEY`
+   - **Value**: A secure password for admin operations (e.g., "mySecureAdminKey123")
+   - **Environment**: Production, Preview, Development (all)
+5. Click "Save" for each
 
 ## 3. Update Repository Name (if needed)
 
