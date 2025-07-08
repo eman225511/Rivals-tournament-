@@ -1,10 +1,12 @@
-let brackets = {}; // memory only
+let brackets = {};
 
 function generateBracketId() {
   return 'BKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-const webhookUrl = "https://discord.com/api/webhooks/1375287456756273272/NljLSelRMRXvSy4MF_ubS7jZ6QENU5P9HWiKJYxIp55ohFDKOxLGpVECvqybdcHGf9Sw";
+// Your webhook URLs
+const signupWebhook = "https://discord.com/api/webhooks/1375287456756273272/NljLSelRMRXvSy4MF_ubS7jZ6QENU5P9HWiKJYxIp55ohFDKOxLGpVECvqybdcHGf9Sw";
+const bracketsWebhook = "https://discord.com/api/webhooks/REPLACE_WITH_YOUR_SECOND_WEBHOOK";
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Only POST allowed' });
@@ -34,7 +36,7 @@ export default async function handler(req, res) {
     timestamp: new Date().toISOString()
   };
 
-  // 1. Send embed
+  // Send signup embed webhook
   const embedPayload = {
     embeds: [{
       title: "🎮 New Rivals Signup",
@@ -57,21 +59,25 @@ export default async function handler(req, res) {
     }]
   };
 
-  await fetch(webhookUrl, {
+  await fetch(signupWebhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(embedPayload)
   });
 
-  // 2. Send the updated brackets as a code block
-  const bracketsText = "📎 Updated Brackets JSON:\n```json\n" +
-    JSON.stringify(brackets, null, 2) + "\n```";
+  // Send bracket update link to second webhook
+  const bracketDumpLink = "https://your-vercel-site.vercel.app/brackets";
 
-  await fetch(webhookUrl, {
+  await fetch(bracketsWebhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content: bracketsText })
+    body: JSON.stringify({
+      content: `📎 [Click here to view updated brackets](${bracketDumpLink})`
+    })
   });
 
-  return res.status(200).json({ success: true, bracketId });
+  res.status(200).json({ success: true, bracketId });
 }
+
+// Export brackets for api/brackets.js
+export { brackets };
