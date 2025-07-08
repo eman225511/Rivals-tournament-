@@ -5,8 +5,8 @@ function generateBracketId() {
 }
 
 // Your webhook URLs
-const signupWebhook = "https://discord.com/api/webhooks/1375287456756273272/NljLSelRMRXvSy4MF_ubS7jZ6QENU5P9HWiKJYxIp55ohFDKOxLGpVECvqybdcHGf9Sw";
-const bracketsWebhook = "https://discord.com/api/webhooks/REPLACE_WITH_YOUR_SECOND_WEBHOOK";
+const signupWebhook = "https://discordapp.com/api/webhooks/1392260390393745408/GBtAXfUNCfr-ywRmGJM2zyZJVQ9yP828C2vpcd9En49t3KpMZ6QnA-Q04VowAGQTcFkn";
+const bracketsWebhook = "https://discordapp.com/api/webhooks/1392260441547341876/BzjuPZhvsjRFZSkcptLKakK8GjFPUlX0obbsBHbHL5RzRzatyPNuLg6Jmgrj-f9-aBXz";
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Only POST allowed' });
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
   });
 
   // Send bracket update link to second webhook
-  const bracketDumpLink = "https://your-vercel-site.vercel.app/brackets";
+  const bracketDumpLink = "https://rivals-tournament.vercel.app/brackets";
 
   await fetch(bracketsWebhook, {
     method: "POST",
