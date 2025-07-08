@@ -1,14 +1,14 @@
-import fetch from 'node-fetch';
+let brackets = {}; // In-memory store (resets when function restarts)
+
+function generateBracketId() {
+  return 'BKT-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+}
 
 const webhookUrl = "https://discord.com/api/webhooks/1375287456756273272/NljLSelRMRXvSy4MF_ubS7jZ6QENU5P9HWiKJYxIp55ohFDKOxLGpVECvqybdcHGf9Sw";
 
-function generateBracketId() {
-  return 'BKT-' + Math.random().toString(36).slice(2, 8).toUpperCase();
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: "Method Not Allowed" });
+    return res.status(405).json({ error: 'Only POST allowed' });
   }
 
   const {
@@ -17,60 +17,99 @@ export default async function handler(req, res) {
     extra_field
   } = req.body;
 
-  // Honeypot trap
-  if (extra_field && extra_field.trim() !== "") {
-    return res.status(400).json({ error: "Spam detected" });
+  // Anti-spam honeypot
+  if (extra_field && extra_field.trim() !== '') {
+    return res.status(400).json({ error: 'Spam detected' });
   }
 
-  // Basic validation
+  // Validate input
   if (!discord || !roblox || !rank || !duo_discord || !duo_roblox || !duo_rank) {
-    return res.status(400).json({ error: "Missing required fields" });
+    return res.status(400).json({ error: 'Missing required fields' });
   }
 
   if (rank !== duo_rank) {
-    return res.status(400).json({ error: "Both players must have the same rank" });
+    return res.status(400).json({ error: 'Both players must have the same rank' });
   }
 
   const bracketId = generateBracketId();
 
-  const payload = {
-    embeds: [{
-      title: "🎮 New Rivals Duo Signup",
-      description: `🆙 Bracket: **${rank}** | Bracket ID: **${bracketId}**`,
-      color: 0xffce3d,
-      fields: [
-        {
-          name: "👤 Player 1",
-          value: `Discord: **${discord}**\nRoblox: **${roblox}**`,
-          inline: true
-        },
-        {
-          name: "👥 Player 2",
-          value: `Discord: **${duo_discord}**\nRoblox: **${duo_roblox}**`,
-          inline: true
-        }
-      ],
-      footer: { text: "Rivals Tournament Bot" },
-      timestamp: new Date().toISOString()
-    }]
+  // Save bracket
+  brackets[bracketId] = {
+    bracketId,
+    rank,
+    player1: { discord, roblox },
+    player2: { discord: duo_discord, roblox: duo_roblox },
+    timestamp: new Date().toISOString()
+  };
+
+  // Send Discord embed
+  const embed = {
+    title: "🎮 New Rivals Signup",
+    color: 0xffce3d,
+    description: `🆙 Bracket: **${rank}**\n🆔 Bracket ID: \`${bracketId}\``,
+    fields: [
+      {
+        name: "👤 Player 1",
+        value: `Discord: **${discord}**\nRoblox: **${roblox}**`,
+        inline: true
+      },
+      {
+        name: "👥 Player 2",
+        value: `Discord: **${duo_discord}**\nRoblox: **${duo_roblox}**`,
+        inline: true
+      }
+    ],
+    footer: { text: "Rivals Bot" },
+    timestamp: new Date().toISOString()
+  };
+
+  const bracketDump = {
+    content: "**📊 Current Bracket State**",
+    embeds: [embed],
+    files: [
+      {
+        name: "brackets.json",
+        content: Buffer.from(JSON.stringify(brackets, null, 2)),
+        type: "application/json"
+      }
+    ]
   };
 
   try {
-    const discordRes = await fetch(webhookUrl, {
+    await fetch(webhookUrl + "?wait=true", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        content: "✅ New team signed up! Here's the updated bracket:",
+        embeds: [embed],
+        files: []
+      })
     });
 
-    if (!discordRes.ok) {
-      const text = await discordRes.text();
-      console.error("Discord webhook error:", text);
-      return res.status(500).json({ error: "Failed to send Discord notification" });
-    }
-
-    return res.status(200).json({ success: true, bracketId });
+    // Send full bracket JSON separately
+    await fetch(webhookUrl + "?wait=true", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        content: "📎 brackets.json",
+        files: [
+          {
+            attachment: Buffer.from(JSON.stringify(brackets, null, 2)).toString('base64'),
+            name: "brackets.json"
+          }
+        ]
+      })
+    });
   } catch (err) {
-    console.error("Internal server error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    console.warn('Discord webhook failed:', err);
   }
+
+  res.status(200).json({ success: true, bracketId });
 }
+
+// Export for access in brackets.js
+export { brackets };
