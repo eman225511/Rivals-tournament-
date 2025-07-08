@@ -195,6 +195,11 @@
         loading.style.display = 'none';
         bracketsData = data;
         
+        // Debug logging
+        console.log('API Response:', data);
+        console.log('Data type:', typeof data);
+        console.log('Object keys:', Object.keys(data));
+        
         if (!data || Object.keys(data).length === 0) {
           container.innerHTML = `
             <div class="no-teams">
