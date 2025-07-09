@@ -4,10 +4,16 @@
   "description": "Rivals Duo Tournament signup with Vercel backend",
   "main": "index.js",
   "scripts": {
-    "start": "vercel dev"
+    "start": "vercel dev",
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "deploy": "vercel --prod"
   },
   "dependencies": {
     "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "type": "module"
 }

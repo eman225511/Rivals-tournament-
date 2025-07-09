@@ -118,115 +118,157 @@ const signupWebhook = "https://discordapp.com/api/webhooks/1392260390393745408/G
 const bracketsWebhook = "https://discordapp.com/api/webhooks/1392260441547341876/BzjuPZhvsjRFZSkcptLKakK8GjFPUlX0obbsBHbHL5RzRzatyPNuLg6Jmgrj-f9-aBXz";
 
 export default async function handler(req, res) {
+  console.log('Request method:', req.method);
+  console.log('Request headers:', req.headers);
+  
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   // Handle preflight request
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request');
     return res.status(200).end();
   }
 
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Only POST allowed' });
+  if (req.method !== 'POST') {
+    console.log('Method not allowed:', req.method);
+    return res.status(405).json({ error: 'Only POST method allowed' });
+  }
 
   console.log('Received signup request:', req.body);
 
-  const {
-    discord, roblox, rank,
-    duo_discord, duo_roblox, duo_rank,
-    extra_field
-  } = req.body;
-
-  if (extra_field && extra_field.trim() !== '') {
-    console.log('Spam detected, rejecting request');
-    return res.status(400).json({ error: 'Spam detected' });
-  }
-
-  if (!discord || !roblox || !rank || !duo_discord || !duo_roblox || !duo_rank) {
-    console.log('Missing required fields:', { discord, roblox, rank, duo_discord, duo_roblox, duo_rank });
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
-  if (rank !== duo_rank) {
-    console.log('Rank mismatch:', { rank, duo_rank });
-    return res.status(400).json({ error: 'Both players must have the same rank' });
-  }
-
   try {
-    const bracketId = generateBracketId();
-    console.log('Generated bracket ID:', bracketId);
+    const {
+      discord, roblox, rank,
+      duo_discord, duo_roblox, duo_rank,
+      extra_field
+    } = req.body || {};
 
-    // Load existing brackets from GitHub
-    const currentBrackets = await loadBracketsFromGitHub();
-
-    currentBrackets[bracketId] = {
-      bracketId,
-      rank,
-      player1: { discord, roblox },
-      player2: { discord: duo_discord, roblox: duo_roblox },
-      timestamp: new Date().toISOString()
-    };
-
-    console.log('Saving bracket data...');
-    // Save updated brackets to GitHub
-    await saveBracketsToGitHub(currentBrackets);
-
-    // Also update in-memory for immediate access
-    brackets = currentBrackets;
-
-    console.log('Sending Discord webhooks...');
-    // Send signup embed webhook
-    const embedPayload = {
-      embeds: [{
-        title: "🎮 New Rivals Signup",
-        color: 0xffce3d,
-        description: `🆙 Bracket: **${rank}**\n🆔 Bracket ID: \`${bracketId}\``,
-        fields: [
-          {
-            name: "👤 Player 1",
-            value: `Discord: **${discord}**\nRoblox: **${roblox}**`,
-            inline: true
-          },
-          {
-            name: "👥 Player 2",
-            value: `Discord: **${duo_discord}**\nRoblox: **${duo_roblox}**`,
-            inline: true
-          }
-        ],
-        footer: { text: "Rivals Bot" },
-        timestamp: new Date().toISOString()
-      }]
-    };
-
-    try {
-      await fetch(signupWebhook, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(embedPayload)
-      });
-
-      // Send bracket update link to second webhook
-      const bracketDumpLink = "https://rivals-tournament.vercel.app/brackets";
-
-      await fetch(bracketsWebhook, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: `📎 [Click here to view updated brackets](${bracketDumpLink})`
-        })
-      });
-    } catch (webhookError) {
-      console.error('Webhook error (non-fatal):', webhookError);
-      // Don't fail the signup if webhooks fail
+    // Anti-spam honeypot check
+    if (extra_field && extra_field.trim() !== '') {
+      console.log('Spam detected, rejecting request');
+      return res.status(400).json({ error: 'Spam detected' });
     }
 
-    console.log('Signup successful for bracket ID:', bracketId);
-    res.status(200).json({ success: true, bracketId });
+    // Validate required fields
+    if (!discord || !roblox || !rank || !duo_discord || !duo_roblox || !duo_rank) {
+      console.log('Missing required fields:', { discord: !!discord, roblox: !!roblox, rank: !!rank, duo_discord: !!duo_discord, duo_roblox: !!duo_roblox, duo_rank: !!duo_rank });
+      return res.status(400).json({ error: 'All fields are required' });
+    }
 
-  } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ error: 'Internal server error. Please try again.' });
+    // Validate rank consistency
+    if (rank !== duo_rank) {
+      console.log('Rank mismatch:', { rank, duo_rank });
+      return res.status(400).json({ error: 'Both players must have the same rank' });
+    }
+
+    // Validate players are different
+    if (discord.toLowerCase().trim() === duo_discord.toLowerCase().trim() || 
+        roblox.toLowerCase().trim() === duo_roblox.toLowerCase().trim()) {
+      console.log('Same player detected');
+      return res.status(400).json({ error: 'Players must be different people' });
+    }
+
+    try {
+      const bracketId = generateBracketId();
+      console.log('Generated bracket ID:', bracketId);
+
+      // Load existing brackets from GitHub
+      const currentBrackets = await loadBracketsFromGitHub();
+
+      currentBrackets[bracketId] = {
+        bracketId,
+        rank,
+        player1: { discord: discord.trim(), roblox: roblox.trim() },
+        player2: { discord: duo_discord.trim(), roblox: duo_roblox.trim() },
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('Saving bracket data...');
+      // Save updated brackets to GitHub
+      await saveBracketsToGitHub(currentBrackets);
+
+      // Also update in-memory for immediate access
+      brackets = currentBrackets;
+
+      console.log('Sending Discord webhooks...');
+      // Send signup embed webhook
+      const embedPayload = {
+        embeds: [{
+          title: "🎮 New Rivals Signup",
+          color: 0xffce3d,
+          description: `🆙 Bracket: **${rank}**\n🆔 Bracket ID: \`${bracketId}\``,
+          fields: [
+            {
+              name: "👤 Player 1",
+              value: `Discord: **${discord}**\nRoblox: **${roblox}**`,
+              inline: true
+            },
+            {
+              name: "👥 Player 2",
+              value: `Discord: **${duo_discord}**\nRoblox: **${duo_roblox}**`,
+              inline: true
+            }
+          ],
+          footer: { text: "Rivals Bot" },
+          timestamp: new Date().toISOString()
+        }]
+      };
+
+      try {
+        const webhookPromises = [];
+        
+        // Send signup webhook
+        webhookPromises.push(
+          fetch(signupWebhook, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(embedPayload)
+          })
+        );
+
+        // Send bracket update link to second webhook
+        const bracketDumpLink = "https://rivals-tournament.vercel.app/brackets";
+        webhookPromises.push(
+          fetch(bracketsWebhook, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: `📎 [Click here to view updated brackets](${bracketDumpLink})`
+            })
+          })
+        );
+
+        // Wait for both webhooks (but don't fail signup if they fail)
+        await Promise.allSettled(webhookPromises);
+        
+      } catch (webhookError) {
+        console.error('Webhook error (non-fatal):', webhookError);
+        // Don't fail the signup if webhooks fail
+      }
+
+      console.log('Signup successful for bracket ID:', bracketId);
+      return res.status(200).json({ 
+        success: true, 
+        bracketId,
+        message: `Successfully registered! Your bracket ID is ${bracketId}` 
+      });
+
+    } catch (error) {
+      console.error('Signup error:', error);
+      return res.status(500).json({ 
+        error: 'Internal server error. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  } catch (outerError) {
+    console.error('Request handling error:', outerError);
+    return res.status(500).json({ 
+      error: 'Server error. Please try again.',
+      details: process.env.NODE_ENV === 'development' ? outerError.message : undefined
+    });
   }
 }
 

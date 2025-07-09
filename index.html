@@ -426,6 +426,8 @@
       console.log('Submitting form data:', formData);
 
       try {
+        console.log('Submitting form data:', formData);
+        
         const res = await fetch("/api/signup", {
           method: "POST",
           headers: { 
@@ -436,17 +438,26 @@
         });
         
         console.log('Response status:', res.status);
-        console.log('Response headers:', [...res.headers.entries()]);
+        console.log('Response ok:', res.ok);
         
         let result;
-        try {
-          result = await res.json();
-          console.log('Response data:', result);
-        } catch (parseError) {
-          console.error('Failed to parse response as JSON:', parseError);
+        const contentType = res.headers.get('content-type');
+        console.log('Content-Type:', contentType);
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            result = await res.json();
+            console.log('Response data:', result);
+          } catch (parseError) {
+            console.error('Failed to parse JSON response:', parseError);
+            const textResponse = await res.text();
+            console.log('Raw response:', textResponse);
+            throw new Error(`Server returned invalid JSON response: ${textResponse.substring(0, 200)}`);
+          }
+        } else {
           const textResponse = await res.text();
-          console.log('Raw response:', textResponse);
-          throw new Error('Server returned invalid response');
+          console.log('Non-JSON response:', textResponse);
+          throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 200)}`);
         }
 
         if (res.ok && result.success) {
@@ -462,15 +473,23 @@
             window.location.href = 'dashboard.html';
           }, 2500);
         } else {
-          showMessage(`⚠️ Error: ${result.error || "Unknown error"}`, "error");
+          const errorMessage = result?.error || `Server error (${res.status})`;
+          showMessage(`⚠️ Error: ${errorMessage}`, "error");
         }
       } catch (err) {
         console.error('Fetch error:', err);
+        
+        let errorMessage = "Unknown error occurred";
+        
         if (err.name === 'TypeError' && err.message.includes('fetch')) {
-          showMessage("❌ Could not connect to server. Please check if the server is running.", "error");
-        } else {
-          showMessage(`❌ Error: ${err.message}`, "error");
+          errorMessage = "Could not connect to server. Please check your internet connection.";
+        } else if (err.name === 'SyntaxError') {
+          errorMessage = "Server returned invalid response. Please try again.";
+        } else if (err.message) {
+          errorMessage = err.message;
         }
+        
+        showMessage(`❌ Error: ${errorMessage}`, "error");
       } finally {
         setLoading(false);
       }

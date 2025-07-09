@@ -216,19 +216,34 @@
       isLoading = true;
 
       try {
-        // Try the primary endpoint first, then fallback
-        let response;
-        try {
-          response = await fetch('/api/brackets');
-        } catch (e) {
-          response = await fetch('/api/bracket');
-        }
+        console.log('Fetching brackets data...');
+        
+        const response = await fetch('/api/brackets', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        const data = await response.json();
+        const contentType = response.headers.get('content-type');
+        console.log('Content-Type:', contentType);
+        
+        let data;
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const textResponse = await response.text();
+          console.error('Non-JSON response:', textResponse);
+          throw new Error('Server returned non-JSON response');
+        }
         
         loading.style.display = 'none';
         bracketsData = data;
@@ -238,7 +253,7 @@
         console.log('Data type:', typeof data);
         console.log('Object keys:', Object.keys(data));
         
-        if (!data || Object.keys(data).length === 0) {
+        if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
           container.innerHTML = `
             <div class="no-teams">
               🚫 No teams have signed up yet.<br>
@@ -273,6 +288,16 @@
 
         let html = '';
         
+        if (sortedRanks.length === 0) {
+          container.innerHTML = `
+            <div class="no-teams">
+              🚫 No teams have signed up yet.<br>
+              <small>Teams will appear here once they complete the signup process.</small>
+            </div>
+          `;
+          return;
+        }
+        
         sortedRanks.forEach(rank => {
           const teams = rankGroups[rank];
           html += `
@@ -282,26 +307,31 @@
           `;
           
           teams.forEach(team => {
+            const player1Discord = team.player1?.discord || 'Unknown';
+            const player1Roblox = team.player1?.roblox || 'Unknown';
+            const player2Discord = team.player2?.discord || 'Unknown';
+            const player2Roblox = team.player2?.roblox || 'Unknown';
+            
             html += `
               <div class="bracket-entry">
                 <div class="bracket-header">
-                  🆔 Bracket ID: ${team.id}
+                  🆔 Bracket ID: ${team.id || team.bracketId}
                   <span class="rank-badge">${team.rank}</span>
                 </div>
                 <div class="player-info">
                   <div class="player-name">
-                    👤 ${team.player1.roblox}
-                    <span class="discord-name">(${team.player1.discord})</span>
+                    👤 ${player1Roblox}
+                    <span class="discord-name">(${player1Discord})</span>
                   </div>
                 </div>
                 <div class="player-info">
                   <div class="player-name">
-                    👥 ${team.player2.roblox}
-                    <span class="discord-name">(${team.player2.discord})</span>
+                    👥 ${player2Roblox}
+                    <span class="discord-name">(${player2Discord})</span>
                   </div>
                 </div>
                 <div class="timestamp">
-                  🕒 Registered: ${new Date(team.timestamp).toLocaleString()}
+                  🕒 Registered: ${team.timestamp ? new Date(team.timestamp).toLocaleString() : 'Unknown'}
                 </div>
               </div>
             `;
@@ -312,9 +342,10 @@
         
       } catch (error) {
         loading.style.display = 'none';
+        const errorMessage = error.message || 'Unknown error occurred';
         container.innerHTML = `
           <div class="no-teams" style="background: #661a1a; border: 1px solid #cc3333;">
-            ❌ Error loading brackets: ${error.message}<br>
+            ❌ Error loading brackets: ${errorMessage}<br>
             <small>Please try refreshing the page or contact an administrator.</small>
           </div>
         `;
