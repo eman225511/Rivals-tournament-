@@ -204,9 +204,14 @@
       <label for="rank">🏅 Your Rivals Rank</label>
       <select id="rank" name="rank" required>
         <option value="">-- Select Your Rank --</option>
-        <option>Bronze</option><option>Silver</option><option>Gold</option>
-        <option>Platinum</option><option>Diamond</option><option>Onyx</option>
-        <option>Nemesis</option><option>Archnemesis</option>
+        <option value="Bronze">🥉 Bronze</option>
+        <option value="Silver">🥈 Silver</option>
+        <option value="Gold">🥇 Gold</option>
+        <option value="Platinum">💎 Platinum</option>
+        <option value="Diamond">💍 Diamond</option>
+        <option value="Onyx">⚫ Onyx</option>
+        <option value="Nemesis">🔴 Nemesis</option>
+        <option value="Archnemesis">🌟 Archnemesis</option>
       </select>
 
       <hr />
@@ -220,9 +225,14 @@
       <label for="duo_rank">🏅 Duo's Rivals Rank</label>
       <select id="duo_rank" name="duo_rank" required>
         <option value="">-- Select Their Rank --</option>
-        <option>Bronze</option><option>Silver</option><option>Gold</option>
-        <option>Platinum</option><option>Diamond</option><option>Onyx</option>
-        <option>Nemesis</option><option>Archnemesis</option>
+        <option value="Bronze">🥉 Bronze</option>
+        <option value="Silver">🥈 Silver</option>
+        <option value="Gold">🥇 Gold</option>
+        <option value="Platinum">💎 Platinum</option>
+        <option value="Diamond">💍 Diamond</option>
+        <option value="Onyx">⚫ Onyx</option>
+        <option value="Nemesis">🔴 Nemesis</option>
+        <option value="Archnemesis">🌟 Archnemesis</option>
       </select>
 
       <input type="submit" value="🚀 Sign Up!" />
@@ -413,14 +423,31 @@
       }
 
       setLoading(true);
+      console.log('Submitting form data:', formData);
 
       try {
         const res = await fetch("/api/signup", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
           body: JSON.stringify(formData)
         });
-        const result = await res.json();
+        
+        console.log('Response status:', res.status);
+        console.log('Response headers:', [...res.headers.entries()]);
+        
+        let result;
+        try {
+          result = await res.json();
+          console.log('Response data:', result);
+        } catch (parseError) {
+          console.error('Failed to parse response as JSON:', parseError);
+          const textResponse = await res.text();
+          console.log('Raw response:', textResponse);
+          throw new Error('Server returned invalid response');
+        }
 
         if (res.ok && result.success) {
           showMessage(`✅ You're signed up! Your Bracket ID: ${result.bracketId}. Redirecting to dashboard...`, "success");
@@ -438,8 +465,12 @@
           showMessage(`⚠️ Error: ${result.error || "Unknown error"}`, "error");
         }
       } catch (err) {
-        showMessage("❌ Could not connect to server. Please check your internet connection.", "error");
-        console.error(err);
+        console.error('Fetch error:', err);
+        if (err.name === 'TypeError' && err.message.includes('fetch')) {
+          showMessage("❌ Could not connect to server. Please check if the server is running.", "error");
+        } else {
+          showMessage(`❌ Error: ${err.message}`, "error");
+        }
       } finally {
         setLoading(false);
       }
