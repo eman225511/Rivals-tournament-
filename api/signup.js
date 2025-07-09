@@ -27,10 +27,13 @@ async function loadBracketsFromGitHub() {
   }
 
   try {
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, {
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json'
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Rivals-Tournament-App'
       }
     });
 
@@ -45,11 +48,11 @@ async function loadBracketsFromGitHub() {
       await saveBracketsToGitHub({});
       return {};
     } else {
-      console.error('Failed to load from GitHub:', response.status);
+      console.error('Failed to load from GitHub:', response.status, response.statusText);
       return brackets;
     }
   } catch (error) {
-    console.error('Error loading from GitHub:', error);
+    console.error('Error loading from GitHub:', error.message);
     return brackets;
   }
 }
@@ -58,22 +61,31 @@ async function loadBracketsFromGitHub() {
 async function saveBracketsToGitHub(bracketsData) {
   if (!GITHUB_TOKEN) {
     console.log('No GitHub token, skipping save');
-    return;
+    return false;
   }
 
   try {
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
+    
     // First, get the current file SHA (required for updates)
     let sha = null;
-    const getResponse = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, {
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
-    });
+    try {
+      const getResponse = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'Rivals-Tournament-App'
+        }
+      });
 
-    if (getResponse.ok) {
-      const getData = await getResponse.json();
-      sha = getData.sha;
+      if (getResponse.ok) {
+        const getData = await getResponse.json();
+        sha = getData.sha;
+        console.log('Found existing file, SHA:', sha);
+      }
+    } catch (getError) {
+      console.log('File does not exist yet, will create new');
     }
 
     // Create or update the file
@@ -82,30 +94,35 @@ async function saveBracketsToGitHub(bracketsData) {
     const updateData = {
       message: `Update brackets data - ${new Date().toISOString()}`,
       content: content,
-      branch: 'main' // or 'master' depending on your default branch
+      branch: 'main'
     };
 
     if (sha) {
       updateData.sha = sha;
     }
 
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, {
+    const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Authorization': `token ${GITHUB_TOKEN}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json'
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Rivals-Tournament-App'
       },
       body: JSON.stringify(updateData)
     });
 
     if (response.ok) {
       console.log('Successfully saved brackets to GitHub');
+      return true;
     } else {
-      console.error('Failed to save to GitHub:', response.status, await response.text());
+      const errorText = await response.text();
+      console.error('Failed to save to GitHub:', response.status, response.statusText, errorText);
+      return false;
     }
   } catch (error) {
-    console.error('Error saving to GitHub:', error);
+    console.error('Error saving to GitHub:', error.message);
+    return false;
   }
 }
 
