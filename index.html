@@ -389,11 +389,19 @@
 
     const debouncedSubmit = debounce(async (e) => {
       e.preventDefault();
+      console.log('🚀 Form submission started');
 
-      if (isLoading) return;
+      if (isLoading) {
+        console.log('❌ Form submission blocked: already loading');
+        return;
+      }
 
       // Honeypot check
-      if (signupForm.querySelector('input[name="extra_field"]').value !== "") return;
+      const honeypotValue = signupForm.querySelector('input[name="extra_field"]').value;
+      if (honeypotValue !== "") {
+        console.log('❌ Form submission blocked: honeypot triggered');
+        return;
+      }
 
       const formData = {
         discord: document.getElementById("discord").value.trim(),
@@ -405,23 +413,29 @@
         extra_field: "" // honeypot
       };
 
+      console.log('📝 Form data:', formData);
+
       // Validation
       if (!formData.discord || !formData.roblox || !formData.rank || 
           !formData.duo_discord || !formData.duo_roblox || !formData.duo_rank) {
+        console.log('❌ Form validation failed: missing fields');
         showMessage("❌ Please fill in all fields!", "error");
         return;
       }
 
       if (formData.discord === formData.duo_discord || formData.roblox === formData.duo_roblox) {
+        console.log('❌ Form validation failed: duplicate players');
         showMessage("❌ Player names must be different!", "error");
         return;
       }
 
       if (formData.rank !== formData.duo_rank) {
+        console.log('❌ Form validation failed: rank mismatch');
         showMessage("❌ Both players must have the SAME rank!", "error");
         return;
       }
 
+      console.log('✅ Form validation passed, starting API call');
       setLoading(true);
       console.log('Submitting form data:', formData);
 
