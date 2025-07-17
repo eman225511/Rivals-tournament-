@@ -1,1 +1,15 @@
-{}
+{
+  "BKT-X8PQCJ": {
+    "bracketId": "BKT-X8PQCJ",
+    "rank": "Bronze",
+    "player1": {
+      "discord": "TestUser#1234",
+      "roblox": "TestRobloxUser"
+    },
+    "player2": {
+      "discord": "TestDuo#5678",
+      "roblox": "TestDuoRoblox"
+    },
+    "timestamp": "2025-07-17T23:06:02.229Z"
+  }
+}
