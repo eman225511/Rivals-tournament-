@@ -1,1 +1,15 @@
-{}
+{
+  "BKT-M022WJ": {
+    "bracketId": "BKT-M022WJ",
+    "rank": "Gold",
+    "player1": {
+      "discord": "TestUser#1234",
+      "roblox": "TestRoblox1"
+    },
+    "player2": {
+      "discord": "TestDuo#5678",
+      "roblox": "TestRoblox2"
+    },
+    "timestamp": "2025-07-17T22:37:14.664Z"
+  }
+}
