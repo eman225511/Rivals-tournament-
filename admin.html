@@ -278,6 +278,80 @@
     </div>
 
     <div class="admin-section">
+      <h3>⚙️ Tournament Settings</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+        <div>
+          <h4 style="color: #ffd43b; margin-bottom: 10px;">📊 Max Teams Per Rank</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">🥉 Bronze</label>
+              <input type="number" id="maxBronze" min="1" max="1000" value="50" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">🥈 Silver</label>
+              <input type="number" id="maxSilver" min="1" max="1000" value="50" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">🥇 Gold</label>
+              <input type="number" id="maxGold" min="1" max="1000" value="50" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">💎 Platinum</label>
+              <input type="number" id="maxPlatinum" min="1" max="1000" value="50" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">💍 Diamond</label>
+              <input type="number" id="maxDiamond" min="1" max="1000" value="50" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">⚫ Onyx</label>
+              <input type="number" id="maxOnyx" min="1" max="1000" value="50" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">🔴 Nemesis</label>
+              <input type="number" id="maxNemesis" min="1" max="1000" value="50" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">🌟 Archnemesis</label>
+              <input type="number" id="maxArchnemesis" min="1" max="1000" value="50" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+            </div>
+          </div>
+        </div>
+        <div>
+          <h4 style="color: #ffd43b; margin-bottom: 10px;">🎛️ Tournament Controls</h4>
+          <div style="margin-bottom: 15px;">
+            <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+              <input type="checkbox" id="registrationEnabled" checked style="margin-right: 10px; transform: scale(1.2);">
+              <span>📝 Enable Registration</span>
+            </label>
+            <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+              <input type="checkbox" id="tournamentStarted" style="margin-right: 10px; transform: scale(1.2);">
+              <span>🚀 Tournament Started</span>
+            </label>
+          </div>
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">📋 Tournament Name</label>
+            <input type="text" id="tournamentName" value="Rivals Duo Tournament" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+          </div>
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">📅 Tournament Date</label>
+            <input type="datetime-local" id="tournamentDate" style="width: 100%; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button class="btn" onclick="debounce(() => loadSettings(), 500, 'loadSettingsBtn')" style="flex: 1;">📥 Load Current Settings</button>
+        <button class="btn" onclick="debounce(() => saveSettings(), 1000, 'saveSettingsBtn')" style="flex: 1;">💾 Save Settings</button>
+        <button class="btn" onclick="debounce(() => resetToDefaults(), 500, 'resetSettingsBtn')" style="flex: 1;">🔄 Reset to Defaults</button>
+      </div>
+      <div id="settings-status" style="padding: 10px; border-radius: 5px; margin-bottom: 10px; display: none;"></div>
+      <div id="current-registrations" style="background: #1a1a2e; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; display: none;">
+        <strong style="color: #ffd43b;">Current Registration Status:</strong>
+        <div id="registration-breakdown"></div>
+      </div>
+    </div>
+
+    <div class="admin-section">
       <h3>📋 Current Tournament Data</h3>
       <button class="btn" onclick="debounce(() => refreshData(), 1000, 'refreshDataBtn')">🔄 Refresh Data</button>
       <button class="btn" onclick="debounce(() => downloadBackup(), 1000, 'downloadBackupBtn')">💾 Download Backup</button>
@@ -871,6 +945,287 @@
         }
       }, 500, 'clearAllData');
     }
+
+    // Tournament Settings Functions
+    async function loadSettings() {
+      if (isLoading) return;
+      
+      debounce(async () => {
+        setLoadingState(true);
+        
+        try {
+          showSettingsStatus('Loading current settings...', 'success');
+          
+          const response = await fetch('/api/admin-settings', {
+            method: 'GET',
+            headers: {
+              'X-Admin-Password': adminKey,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          
+          if (result.success && result.settings) {
+            const settings = result.settings;
+            
+            // Load max teams per rank
+            if (settings.maxTeamsPerRank) {
+              document.getElementById('maxBronze').value = settings.maxTeamsPerRank.Bronze || 50;
+              document.getElementById('maxSilver').value = settings.maxTeamsPerRank.Silver || 50;
+              document.getElementById('maxGold').value = settings.maxTeamsPerRank.Gold || 50;
+              document.getElementById('maxPlatinum').value = settings.maxTeamsPerRank.Platinum || 50;
+              document.getElementById('maxDiamond').value = settings.maxTeamsPerRank.Diamond || 50;
+              document.getElementById('maxOnyx').value = settings.maxTeamsPerRank.Onyx || 50;
+              document.getElementById('maxNemesis').value = settings.maxTeamsPerRank.Nemesis || 50;
+              document.getElementById('maxArchnemesis').value = settings.maxTeamsPerRank.Archnemesis || 50;
+            }
+            
+            // Load tournament controls
+            document.getElementById('registrationEnabled').checked = settings.registrationEnabled !== false;
+            document.getElementById('tournamentStarted').checked = settings.tournamentStarted === true;
+            document.getElementById('tournamentName').value = settings.tournamentName || 'Rivals Duo Tournament';
+            
+            if (settings.tournamentDate) {
+              document.getElementById('tournamentDate').value = settings.tournamentDate;
+            }
+            
+            showSettingsStatus('✅ Settings loaded successfully!', 'success');
+            
+            // Also load current registration status
+            await loadRegistrationStatus();
+            
+          } else {
+            showSettingsStatus('❌ Failed to load settings: ' + (result.error || 'Unknown error'), 'error');
+          }
+        } catch (error) {
+          showSettingsStatus('Failed to load settings: ' + error.message, 'error');
+          console.error('Load settings failed:', error);
+        } finally {
+          setLoadingState(false);
+        }
+      }, 500, 'loadSettings');
+    }
+
+    async function saveSettings() {
+      if (isLoading) return;
+      
+      if (!adminKey) {
+        showSettingsStatus('Authentication required', 'error');
+        return;
+      }
+      
+      debounce(async () => {
+        setLoadingState(true);
+        
+        try {
+          showSettingsStatus('Saving settings...', 'success');
+          
+          const settings = {
+            maxTeamsPerRank: {
+              Bronze: parseInt(document.getElementById('maxBronze').value) || 50,
+              Silver: parseInt(document.getElementById('maxSilver').value) || 50,
+              Gold: parseInt(document.getElementById('maxGold').value) || 50,
+              Platinum: parseInt(document.getElementById('maxPlatinum').value) || 50,
+              Diamond: parseInt(document.getElementById('maxDiamond').value) || 50,
+              Onyx: parseInt(document.getElementById('maxOnyx').value) || 50,
+              Nemesis: parseInt(document.getElementById('maxNemesis').value) || 50,
+              Archnemesis: parseInt(document.getElementById('maxArchnemesis').value) || 50
+            },
+            registrationEnabled: document.getElementById('registrationEnabled').checked,
+            tournamentStarted: document.getElementById('tournamentStarted').checked,
+            tournamentName: document.getElementById('tournamentName').value || 'Rivals Duo Tournament',
+            tournamentDate: document.getElementById('tournamentDate').value || null,
+            lastUpdated: new Date().toISOString(),
+            updatedBy: 'Admin Panel'
+          };
+
+          const response = await fetch('/api/admin-settings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Admin-Password': adminKey
+            },
+            body: JSON.stringify({ settings })
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            showSettingsStatus('✅ Settings saved successfully!', 'success');
+            await loadRegistrationStatus(); // Refresh the registration status
+          } else {
+            showSettingsStatus(`❌ Failed to save settings: ${result.error || 'Unknown error'}`, 'error');
+          }
+        } catch (error) {
+          showSettingsStatus('Failed to save settings: ' + error.message, 'error');
+          console.error('Save settings failed:', error);
+        } finally {
+          setLoadingState(false);
+        }
+      }, 1000, 'saveSettings');
+    }
+
+    function resetToDefaults() {
+      if (isLoading) return;
+      
+      if (!confirm('Reset all settings to default values?')) {
+        return;
+      }
+      
+      // Reset max teams per rank to 50
+      document.getElementById('maxBronze').value = 50;
+      document.getElementById('maxSilver').value = 50;
+      document.getElementById('maxGold').value = 50;
+      document.getElementById('maxPlatinum').value = 50;
+      document.getElementById('maxDiamond').value = 50;
+      document.getElementById('maxOnyx').value = 50;
+      document.getElementById('maxNemesis').value = 50;
+      document.getElementById('maxArchnemesis').value = 50;
+      
+      // Reset tournament controls
+      document.getElementById('registrationEnabled').checked = true;
+      document.getElementById('tournamentStarted').checked = false;
+      document.getElementById('tournamentName').value = 'Rivals Duo Tournament';
+      document.getElementById('tournamentDate').value = '';
+      
+      showSettingsStatus('Settings reset to defaults (not saved yet)', 'success');
+    }
+
+    async function loadRegistrationStatus() {
+      try {
+        const response = await fetch('/api/bracket');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Count teams per rank
+        const rankCounts = {
+          Bronze: 0, Silver: 0, Gold: 0, Platinum: 0,
+          Diamond: 0, Onyx: 0, Nemesis: 0, Archnemesis: 0
+        };
+        
+        Object.values(data).forEach(team => {
+          if (team.rank && rankCounts.hasOwnProperty(team.rank)) {
+            rankCounts[team.rank]++;
+          }
+        });
+        
+        // Get max values from form
+        const maxValues = {
+          Bronze: parseInt(document.getElementById('maxBronze').value) || 50,
+          Silver: parseInt(document.getElementById('maxSilver').value) || 50,
+          Gold: parseInt(document.getElementById('maxGold').value) || 50,
+          Platinum: parseInt(document.getElementById('maxPlatinum').value) || 50,
+          Diamond: parseInt(document.getElementById('maxDiamond').value) || 50,
+          Onyx: parseInt(document.getElementById('maxOnyx').value) || 50,
+          Nemesis: parseInt(document.getElementById('maxNemesis').value) || 50,
+          Archnemesis: parseInt(document.getElementById('maxArchnemesis').value) || 50
+        };
+        
+        // Build status display
+        let statusHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">';
+        
+        Object.keys(rankCounts).forEach(rank => {
+          const current = rankCounts[rank];
+          const max = maxValues[rank];
+          const percentage = max > 0 ? (current / max * 100).toFixed(1) : 0;
+          const isNearFull = percentage >= 80;
+          const isFull = current >= max;
+          
+          const emoji = {
+            Bronze: '🥉', Silver: '🥈', Gold: '🥇', Platinum: '💎',
+            Diamond: '💍', Onyx: '⚫', Nemesis: '🔴', Archnemesis: '🌟'
+          }[rank];
+          
+          const color = isFull ? '#dc3545' : isNearFull ? '#ffc107' : '#28a745';
+          
+          statusHtml += `
+            <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; border-left: 3px solid ${color};">
+              <div style="font-weight: bold; color: ${color};">${emoji} ${rank}</div>
+              <div style="font-size: 1.1rem; margin: 5px 0;">${current} / ${max}</div>
+              <div style="font-size: 0.9rem; color: #ccc;">${percentage}% full</div>
+            </div>
+          `;
+        });
+        
+        statusHtml += '</div>';
+        
+        const totalTeams = Object.values(rankCounts).reduce((sum, count) => sum + count, 0);
+        const totalMax = Object.values(maxValues).reduce((sum, max) => sum + max, 0);
+        
+        statusHtml = `
+          <div style="margin-bottom: 15px;">
+            <strong>Total Teams: ${totalTeams} / ${totalMax}</strong> 
+            <span style="color: #ccc;">(${((totalTeams / totalMax) * 100).toFixed(1)}% capacity)</span>
+          </div>
+        ` + statusHtml;
+        
+        document.getElementById('registration-breakdown').innerHTML = statusHtml;
+        document.getElementById('current-registrations').style.display = 'block';
+        
+      } catch (error) {
+        console.error('Failed to load registration status:', error);
+        document.getElementById('registration-breakdown').innerHTML = 
+          '<div style="color: #dc3545;">Failed to load registration status</div>';
+        document.getElementById('current-registrations').style.display = 'block';
+      }
+    }
+
+    function showSettingsStatus(message, type) {
+      const statusDiv = document.getElementById('settings-status');
+      statusDiv.style.display = 'block';
+      statusDiv.textContent = message;
+      
+      // Remove existing classes
+      statusDiv.className = '';
+      
+      if (type === 'success') {
+        statusDiv.style.background = 'linear-gradient(135deg, #d4edda, #c3e6cb)';
+        statusDiv.style.color = '#155724';
+        statusDiv.style.borderLeft = '4px solid #28a745';
+      } else if (type === 'error') {
+        statusDiv.style.background = 'linear-gradient(135deg, #f8d7da, #f5c6cb)';
+        statusDiv.style.color = '#721c24';
+        statusDiv.style.borderLeft = '4px solid #dc3545';
+      } else {
+        statusDiv.style.background = 'linear-gradient(135deg, #d1ecf1, #bee5eb)';
+        statusDiv.style.color = '#0c5460';
+        statusDiv.style.borderLeft = '4px solid #17a2b8';
+      }
+      
+      // Auto-hide after 5 seconds for non-error messages
+      if (type !== 'error') {
+        setTimeout(() => {
+          statusDiv.style.display = 'none';
+        }, 5000);
+      }
+    }
+
+    // Auto-load settings when admin panel loads
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if admin is already authenticated
+      if (adminKey) {
+        loadSettings();
+      }
+    });
+
+    // Also load settings after successful authentication
+    const originalAuthenticateAdmin = authenticateAdmin;
+    authenticateAdmin = async function() {
+      const result = await originalAuthenticateAdmin();
+      if (result) {
+        setTimeout(() => loadSettings(), 500);
+      }
+      return result;
+    };
   </script>
 </body>
 </html>

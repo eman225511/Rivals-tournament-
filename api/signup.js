@@ -2,9 +2,26 @@
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // You'll need to set this in Vercel
 const GITHUB_REPO = 'eman225511/Rivals-tournament-'; // Your GitHub repo
 const GITHUB_FILE_PATH = 'data/brackets.json';
+const SETTINGS_FILE_PATH = 'data/settings.json';
 
 // Simple in-memory storage as fallback
 let brackets = {};
+
+// Default settings
+const defaultSettings = {
+  maxTeamsPerRank: {
+    "Bronze": 50,
+    "Silver": 50,
+    "Gold": 50,
+    "Platinum": 50,
+    "Diamond": 50,
+    "Onyx": 50,
+    "Nemesis": 50,
+    "Archnemesis": 50
+  },
+  registrationEnabled: true,
+  tournamentStarted: false
+};
 
 // Initialize with some sample data for testing
 if (Object.keys(brackets).length === 0) {
@@ -19,7 +36,144 @@ if (Object.keys(brackets).length === 0) {
   };
 }
 
-// Load brackets from GitHub
+// Load settings from GitHub
+async function loadSettingsFromGitHub() {
+  if (!GITHUB_TOKEN) {
+    console.log('No GitHub token, using default settings');
+    return defaultSettings;
+  }
+
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${SETTINGS_FILE_PATH}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Rivals-Tournament-App'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      let content;
+      try {
+        const binaryString = atob(data.content.replace(/\s/g, ''));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        content = new TextDecoder('utf-8').decode(bytes);
+      } catch (decodeError) {
+        console.error('Settings base64 decode failed:', decodeError);
+        return defaultSettings;
+      }
+      const parsed = JSON.parse(content);
+      console.log('Loaded settings from GitHub');
+      return { ...defaultSettings, ...parsed };
+    } else if (response.status === 404) {
+      console.log('Settings file not found in GitHub, using defaults');
+      return defaultSettings;
+    } else {
+      console.error('Failed to load settings from GitHub:', response.status);
+      return defaultSettings;
+    }
+  } catch (error) {
+    console.error('Error loading settings from GitHub:', error.message);
+    return defaultSettings;
+  }
+}
+
+// Save settings to GitHub
+async function saveSettingsToGitHub(settings) {
+  if (!GITHUB_TOKEN) {
+    console.log('No GitHub token, skipping settings save');
+    return false;
+  }
+
+  try {
+    // Get current file SHA
+    let sha = null;
+    const getResponse = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${SETTINGS_FILE_PATH}`, {
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (getResponse.ok) {
+      const getData = await getResponse.json();
+      sha = getData.sha;
+    }
+
+    const content = btoa(JSON.stringify(settings, null, 2));
+    
+    const updateData = {
+      message: `Update settings - ${new Date().toISOString()}`,
+      content: content,
+      branch: 'main'
+    };
+
+    if (sha) {
+      updateData.sha = sha;
+    }
+
+    const updateResponse = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${SETTINGS_FILE_PATH}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    if (updateResponse.ok) {
+      console.log('Settings saved to GitHub successfully');
+      return true;
+    } else {
+      console.error('Failed to save settings to GitHub:', updateResponse.status);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error saving settings to GitHub:', error.message);
+    return false;
+  }
+}
+
+// Check if registration is allowed for a rank
+async function checkRankLimit(rank, currentBrackets) {
+  const settings = await loadSettingsFromGitHub();
+  
+  if (!settings.registrationEnabled) {
+    return { allowed: false, reason: 'Registration is currently disabled' };
+  }
+
+  if (settings.tournamentStarted) {
+    return { allowed: false, reason: 'Tournament has already started, registration is closed' };
+  }
+
+  const maxTeams = settings.maxTeamsPerRank[rank];
+  if (!maxTeams) {
+    return { allowed: false, reason: `Invalid rank: ${rank}` };
+  }
+
+  // Count existing teams in this rank
+  const teamsInRank = Object.values(currentBrackets).filter(team => team.rank === rank).length;
+  
+  if (teamsInRank >= maxTeams) {
+    return { 
+      allowed: false, 
+      reason: `${rank} rank is full (${teamsInRank}/${maxTeams} teams)` 
+    };
+  }
+
+  return { 
+    allowed: true, 
+    teamsInRank: teamsInRank,
+    maxTeams: maxTeams
+  };
+}
 async function loadBracketsFromGitHub() {
   if (!GITHUB_TOKEN) {
     console.log('No GitHub token, using in-memory storage');
@@ -211,11 +365,36 @@ export default async function handler(req, res) {
     }
 
     try {
+      // Load existing brackets from GitHub first
+      const currentBrackets = await loadBracketsFromGitHub();
+      console.log('Current brackets loaded:', Object.keys(currentBrackets).length);
+
+      // Check rank limits and registration status
+      const rankCheck = await checkRankLimit(rank, currentBrackets);
+      if (!rankCheck.allowed) {
+        console.log('Registration not allowed:', rankCheck.reason);
+        return res.status(400).json({ error: rankCheck.reason });
+      }
+
+      console.log(`Registration allowed for ${rank}: ${rankCheck.teamsInRank}/${rankCheck.maxTeams} teams`);
+
+      // Check for duplicate player names across all existing teams
+      const existingPlayers = [];
+      Object.values(currentBrackets).forEach(team => {
+        existingPlayers.push(team.player1.discord.toLowerCase(), team.player1.roblox.toLowerCase());
+        existingPlayers.push(team.player2.discord.toLowerCase(), team.player2.roblox.toLowerCase());
+      });
+
+      const newPlayers = [discord.toLowerCase(), roblox.toLowerCase(), duo_discord.toLowerCase(), duo_roblox.toLowerCase()];
+      for (const player of newPlayers) {
+        if (existingPlayers.includes(player)) {
+          console.log('Duplicate player found:', player);
+          return res.status(400).json({ error: 'One of these players is already registered in the tournament' });
+        }
+      }
+
       const bracketId = generateBracketId();
       console.log('Generated bracket ID:', bracketId);
-
-      // Load existing brackets from GitHub
-      const currentBrackets = await loadBracketsFromGitHub();
 
       currentBrackets[bracketId] = {
         bracketId,
