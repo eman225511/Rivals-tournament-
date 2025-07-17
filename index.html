@@ -273,10 +273,14 @@
           if (!registrationEnabled) {
             showRegistrationClosed(status.tournamentStarted);
           }
+        } else {
+          console.log('Registration status API returned error:', response.status);
+          // Don't block registration if API fails - assume enabled
         }
       } catch (error) {
-        console.log('Could not check registration status, assuming enabled');
+        console.log('Could not check registration status, assuming enabled:', error.message);
         // Don't block registration if we can't check status
+        // This ensures users can still sign up even if the status API is down
       }
     }
 
