@@ -464,6 +464,7 @@
 
       try {
         // Test the admin key by making a request to the admin API
+        console.log('Attempting authentication with key:', inputKey ? 'Key provided' : 'No key');
         const response = await fetch(`/api/admin?key=${encodeURIComponent(inputKey)}`, {
           method: 'GET',
           headers: {
@@ -471,6 +472,8 @@
           }
         });
 
+        console.log('Auth response status:', response.status);
+        
         if (response.ok) {
           // Authentication successful
           adminKey = inputKey;

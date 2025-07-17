@@ -254,7 +254,12 @@
     <div class="login-box">
       <h2>🎯 Team Login</h2>
       <p style="color: #ccc; margin-bottom: 20px;">Enter your Bracket ID to access your team dashboard</p>
-      <input type="text" id="bracketIdInput" class="login-input" placeholder="BKT-XXXXXX" maxlength="10" />
+      <div style="margin-bottom: 10px;">
+        <input type="text" id="bracketIdInput" class="login-input" placeholder="BKT-XXXXXX" maxlength="10" />
+        <div style="color: #999; font-size: 0.85rem; margin-top: 5px;">
+          💡 Your Bracket ID was provided when you signed up (format: BKT-ABC123)
+        </div>
+      </div>
       <button class="login-btn" onclick="authenticateTeam()">🚀 Access Dashboard</button>
       <div id="loginError" style="color: #dc3545; margin-top: 10px; display: none;"></div>
       <div style="margin-top: 20px;">
@@ -383,6 +388,8 @@
       const inputBracketId = document.getElementById('bracketIdInput').value.trim().toUpperCase();
       const loginBtn = document.querySelector('.login-btn');
       
+      console.log('Attempting to authenticate with Bracket ID:', inputBracketId);
+      
       if (!inputBracketId) {
         showLoginError('Please enter your Bracket ID');
         return;
@@ -397,6 +404,7 @@
         isLoading = true;
         setButtonLoading(loginBtn, true);
         
+        console.log('Fetching bracket data from API...');
         // Load all brackets and find the team
         const response = await fetch('/api/bracket');
         if (!response.ok) {
@@ -404,9 +412,13 @@
         }
         
         const data = await response.json();
+        console.log('Received bracket data:', Object.keys(data).length, 'teams');
+        console.log('Available bracket IDs:', Object.keys(data));
+        console.log('Looking for bracket ID:', inputBracketId);
         
         if (data[inputBracketId]) {
           // Team found
+          console.log('Team found:', data[inputBracketId]);
           currentTeam = data[inputBracketId];
           bracketId = inputBracketId;
           
@@ -420,9 +432,18 @@
           // Load team data
           loadTeamData();
         } else {
-          showLoginError('Bracket ID not found. Please check your ID and try again.');
+          console.log('Team not found for bracket ID:', inputBracketId);
+          console.log('Available teams:', Object.keys(data));
+          
+          // Check if there are any teams at all
+          if (Object.keys(data).length === 0) {
+            showLoginError('No teams found in the tournament yet. Please check if registration is open.');
+          } else {
+            showLoginError(`Bracket ID "${inputBracketId}" not found. Please check your ID and try again. Available teams: ${Object.keys(data).length}`);
+          }
         }
       } catch (error) {
+        console.error('Authentication error:', error);
         showLoginError('Failed to authenticate: ' + error.message);
       } finally {
         isLoading = false;
