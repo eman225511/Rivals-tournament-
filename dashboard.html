@@ -406,14 +406,13 @@
         
         console.log('Fetching bracket data from API...');
         // Load all brackets and find the team
-        const response = await fetch('/api/bracket');
+        const response = await fetch('/api/brackets');
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
         console.log('Received bracket data:', Object.keys(data).length, 'teams');
-        console.log('Available bracket IDs:', Object.keys(data));
         console.log('Looking for bracket ID:', inputBracketId);
         
         if (data[inputBracketId]) {
@@ -433,7 +432,6 @@
           loadTeamData();
         } else {
           console.log('Team not found for bracket ID:', inputBracketId);
-          console.log('Available teams:', Object.keys(data));
           
           // Check if there are any teams at all
           if (Object.keys(data).length === 0) {
@@ -492,7 +490,7 @@
         setButtonLoading(refreshBtn, true);
         showStatus('Refreshing team data...', 'success');
         
-        const response = await fetch('/api/bracket');
+        const response = await fetch('/api/brackets');
         const data = await response.json();
         
         if (data[bracketId]) {
@@ -658,7 +656,7 @@
         setButtonLoading(loadBtn, true);
         showStatus('Loading bracket for your rank...', 'success');
         
-        const response = await fetch('/api/bracket');
+        const response = await fetch('/api/brackets');
         const data = await response.json();
         
         // Filter teams by current team's rank
@@ -684,7 +682,7 @@
             html += `
               <div class="bracket-entry ${isCurrentTeam ? 'current-team' : ''}">
                 <div class="bracket-header">
-                  ${isCurrentTeam ? '⭐ ' : ''}${team.bracketId}${isCurrentTeam ? ' (Your Team)' : ''}
+                  ${isCurrentTeam ? '⭐ Your Team' : '👥 Team'}
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                   <div>

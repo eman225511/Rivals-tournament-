@@ -218,7 +218,7 @@
       try {
         console.log('Fetching brackets data...');
         
-        const response = await fetch('/api/brackets', {
+        const response = await fetch('/api/brackets-public', {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -371,13 +371,24 @@
       downloadBtn.classList.add('loading');
       
       try {
-        const jsonString = JSON.stringify(bracketsData, null, 2);
+        // Create public version of data for download (no sensitive bracket IDs)
+        const publicData = {};
+        Object.entries(bracketsData).forEach(([id, team], index) => {
+          publicData[`team_${index + 1}`] = {
+            rank: team.rank,
+            player1: team.player1,
+            player2: team.player2,
+            timestamp: team.timestamp
+          };
+        });
+        
+        const jsonString = JSON.stringify(publicData, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
         const link = document.createElement('a');
         link.href = url;
-        link.download = `tournament-brackets-${new Date().toISOString().split('T')[0]}.json`;
+        link.download = `tournament-brackets-public-${new Date().toISOString().split('T')[0]}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🧪 Test APIs - Rivals Tournament</title>
+  <style>
+    body {
+      margin: 0; padding: 20px;
+      background: linear-gradient(135deg, #181823, #2b2a45);
+      color: #f0f0f5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #282843;
+      padding: 30px;
+      border-radius: 15px;
+    }
+    h1 { color: #ffd43b; text-align: center; }
+    .test-section {
+      background: #393962;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 10px;
+    }
+    button {
+      background: #ffd43b;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      color: #282843;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 5px;
+    }
+    pre {
+      background: #1a1a2e;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      color: #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 API Testing</h1>
+    
+    <div class="test-section">
+      <h3>📖 Public Brackets API (for brackets.html)</h3>
+      <button onclick="testPublicBrackets()">Test /api/brackets-public</button>
+      <pre id="public-result">Click button to test...</pre>
+    </div>
+
+    <div class="test-section">
+      <h3>🔐 Private Brackets API (for dashboard.html)</h3>
+      <button onclick="testPrivateBrackets()">Test /api/brackets</button>
+      <pre id="private-result">Click button to test...</pre>
+    </div>
+
+    <div class="test-section">
+      <h3>🆔 Test Bracket IDs</h3>
+      <p>Available test bracket IDs from current data:</p>
+      <ul>
+        <li><code>BKT-GMX2HM</code> (Gold rank)</li>
+        <li><code>BKT-BMR36W</code> (Diamond rank)</li>
+        <li><code>BKT-CGUXVF</code> (Bronze rank)</li>
+      </ul>
+      <p><a href="dashboard.html" style="color: #ffd43b;">→ Try logging into dashboard with one of these IDs</a></p>
+    </div>
+  </div>
+
+  <script>
+    async function testPublicBrackets() {
+      const resultDiv = document.getElementById('public-result');
+      resultDiv.textContent = 'Loading...';
+      
+      try {
+        const response = await fetch('/api/brackets-public');
+        const data = await response.json();
+        
+        resultDiv.textContent = `Status: ${response.status}\n\n` + 
+          JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultDiv.textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testPrivateBrackets() {
+      const resultDiv = document.getElementById('private-result');
+      resultDiv.textContent = 'Loading...';
+      
+      try {
+        const response = await fetch('/api/brackets');
+        const data = await response.json();
+        
+        resultDiv.textContent = `Status: ${response.status}\n\n` + 
+          JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultDiv.textContent = 'Error: ' + error.message;
+      }
+    }
+  </script>
+</body>
+</html>
