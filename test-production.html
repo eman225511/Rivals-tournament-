@@ -101,8 +101,9 @@
       <p>Test all API endpoints to ensure they're working correctly:</p>
       <div style="margin-bottom: 15px;">
         <label style="color: #ffd43b; margin-right: 10px;">Admin Password:</label>
-        <input type="password" id="adminPassword" placeholder="Enter admin password" style="padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee; margin-right: 10px;">
+        <input type="password" id="adminPassword" placeholder="Enter your ADMIN_KEY from environment" style="padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee; margin-right: 10px;">
         <button class="test-button" onclick="saveAdminPassword()">Save Password</button>
+        <div style="font-size: 0.9rem; color: #ccc; margin-top: 5px;">⚠️ Enter your actual ADMIN_KEY environment variable value</div>
       </div>
       <button class="test-button" onclick="testAPI('/api/signup', 'POST')">Test Signup API</button>
       <button class="test-button" onclick="testAPI('/api/bracket', 'GET')">Test Bracket API</button>
@@ -291,7 +292,7 @@
         const response = await fetch('/api/admin-settings', {
           method: 'GET',
           headers: {
-            'X-Admin-Key': 'tournament2024',
+            'X-Admin-Key': storedAdminPassword,
             'Content-Type': 'application/json'
           }
         });

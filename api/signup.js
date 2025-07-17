@@ -505,3 +505,6 @@ export async function getBrackets() {
   // Fallback to in-memory storage
   return brackets;
 }
+
+// Export settings functions for admin-settings.js
+export { loadSettingsFromGitHub, saveSettingsToGitHub, loadBracketsFromGitHub, saveBracketsToGitHub };
