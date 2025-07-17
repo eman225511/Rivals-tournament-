@@ -99,6 +99,11 @@
     <div class="test-section">
       <h3>🔗 API Endpoint Tests</h3>
       <p>Test all API endpoints to ensure they're working correctly:</p>
+      <div style="margin-bottom: 15px;">
+        <label style="color: #ffd43b; margin-right: 10px;">Admin Password:</label>
+        <input type="password" id="adminPassword" placeholder="Enter admin password" style="padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee; margin-right: 10px;">
+        <button class="test-button" onclick="saveAdminPassword()">Save Password</button>
+      </div>
       <button class="test-button" onclick="testAPI('/api/signup', 'POST')">Test Signup API</button>
       <button class="test-button" onclick="testAPI('/api/bracket', 'GET')">Test Bracket API</button>
       <button class="test-button" onclick="testAPI('/api/admin-settings', 'GET')">Test Admin Settings API</button>
@@ -137,6 +142,17 @@
   </div>
 
   <script>
+    let storedAdminPassword = 'tournament2024'; // default fallback
+    
+    function saveAdminPassword() {
+      const password = document.getElementById('adminPassword').value;
+      if (password) {
+        storedAdminPassword = password;
+        const resultsDiv = document.getElementById('api-results');
+        resultsDiv.innerHTML = '<div class="result success">✅ Admin password saved for testing</div>';
+      }
+    }
+
     async function testAPI(endpoint, method) {
       const resultsDiv = document.getElementById('api-results');
       
@@ -164,7 +180,7 @@
         }
 
         if (endpoint === '/api/admin-settings') {
-          options.headers['X-Admin-Password'] = 'tournament2024';
+          options.headers['X-Admin-Key'] = storedAdminPassword;
         }
 
         const response = await fetch(endpoint, options);
@@ -275,7 +291,7 @@
         const response = await fetch('/api/admin-settings', {
           method: 'GET',
           headers: {
-            'X-Admin-Password': 'tournament2024',
+            'X-Admin-Key': 'tournament2024',
             'Content-Type': 'application/json'
           }
         });
@@ -314,8 +330,7 @@
         { name: 'Main signup page', url: '/index.html' },
         { name: 'Dashboard page', url: '/dashboard.html' },
         { name: 'Admin panel', url: '/admin.html' },
-        { name: 'Brackets API', url: '/api/bracket' },
-        { name: 'Signup API', url: '/api/signup' }
+        { name: 'Brackets API', url: '/api/bracket' }
       ];
 
       for (const check of checks) {

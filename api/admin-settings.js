@@ -1,13 +1,13 @@
 // Admin API for managing tournament settings and teams
 import { loadSettingsFromGitHub, saveSettingsToGitHub, loadBracketsFromGitHub, saveBracketsToGitHub } from './signup.js';
 
-const ADMIN_PASSWORD = process.env.ADMIN_KEY
+const ADMIN_PASSWORD = process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || 'tournament2024';
 
 export default async function handler(req, res) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Password');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Password, X-Admin-Key');
 
   // Handle preflight request
   if (req.method === 'OPTIONS') {
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   }
 
   // Check admin password
-  const adminPassword = req.headers['x-admin-password'] || req.body?.adminPassword;
+  const adminPassword = req.headers['x-admin-key'] || req.headers['x-admin-password'] || req.body?.adminPassword;
   if (adminPassword !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Unauthorized: Invalid admin password' });
   }

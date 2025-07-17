@@ -959,7 +959,7 @@
           const response = await fetch('/api/admin-settings', {
             method: 'GET',
             headers: {
-              'X-Admin-Password': adminKey,
+              'X-Admin-Key': adminKey,
               'Content-Type': 'application/json'
             }
           });
@@ -1048,7 +1048,7 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-Admin-Password': adminKey
+              'X-Admin-Key': adminKey
             },
             body: JSON.stringify({ settings })
           });
