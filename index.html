@@ -433,46 +433,43 @@
         console.log('❌ Form validation failed: rank mismatch');
         showMessage("❌ Both players must have the SAME rank!", "error");
         return;
-      }
+      }        console.log('✅ Form validation passed, starting API call');
+        setLoading(true);
 
-      console.log('✅ Form validation passed, starting API call');
-      setLoading(true);
-      console.log('Submitting form data:', formData);
-
-      try {
-        console.log('Submitting form data:', formData);
-        
-        const res = await fetch("/api/signup", {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        console.log('Response status:', res.status);
-        console.log('Response ok:', res.ok);
-        
-        let result;
-        const contentType = res.headers.get('content-type');
-        console.log('Content-Type:', contentType);
-        
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            result = await res.json();
-            console.log('Response data:', result);
-          } catch (parseError) {
-            console.error('Failed to parse JSON response:', parseError);
+        try {
+          console.log('Submitting form data:', formData);
+          
+          const res = await fetch("/api/signup", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify(formData)
+          });
+          
+          console.log('Response status:', res.status);
+          console.log('Response ok:', res.ok);
+          
+          let result;
+          const contentType = res.headers.get('content-type');
+          console.log('Content-Type:', contentType);
+          
+          if (contentType && contentType.includes('application/json')) {
+            try {
+              result = await res.json();
+              console.log('Response data:', result);
+            } catch (parseError) {
+              console.error('Failed to parse JSON response:', parseError);
+              const textResponse = await res.text();
+              console.log('Raw response:', textResponse);
+              throw new Error(`Server returned invalid JSON response. Status: ${res.status}`);
+            }
+          } else {
             const textResponse = await res.text();
-            console.log('Raw response:', textResponse);
-            throw new Error(`Server returned invalid JSON response: ${textResponse.substring(0, 200)}`);
+            console.log('Non-JSON response:', textResponse);
+            throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
           }
-        } else {
-          const textResponse = await res.text();
-          console.log('Non-JSON response:', textResponse);
-          throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 200)}`);
-        }
 
         if (res.ok && result.success) {
           showMessage(`✅ You're signed up! Your Bracket ID: ${result.bracketId}. Redirecting to dashboard...`, "success");

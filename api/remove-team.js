@@ -20,7 +20,19 @@ async function loadBracketsFromGitHub() {
 
     if (response.ok) {
       const data = await response.json();
-      const content = Buffer.from(data.content, 'base64').toString('utf8');
+      // Edge-runtime compatible base64 decoding
+      let content;
+      try {
+        const binaryString = atob(data.content.replace(/\s/g, ''));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        content = new TextDecoder('utf-8').decode(bytes);
+      } catch (decodeError) {
+        console.error('Base64 decode failed:', decodeError);
+        content = data.content;
+      }
       const parsed = JSON.parse(content);
       return parsed;
     } else if (response.status === 404) {
@@ -58,8 +70,8 @@ async function saveBracketsToGitHub(bracketsData) {
       sha = getData.sha;
     }
 
-    // Create or update the file
-    const content = Buffer.from(JSON.stringify(bracketsData, null, 2)).toString('base64');
+    // Create or update the file - edge-runtime compatible encoding
+    const content = btoa(JSON.stringify(bracketsData, null, 2));
     
     const updateData = {
       message: `Remove team - ${new Date().toISOString()}`,

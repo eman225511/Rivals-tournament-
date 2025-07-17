@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 API Test Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+        }
+        h1 {
+            color: #ffd43b;
+            text-align: center;
+        }
+        .test-section {
+            background: #0f3460;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ffd43b;
+        }
+        button {
+            background: #ffd43b;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #f9d900;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #000;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #333;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { border-color: #4CAF50; }
+        .error { border-color: #f44336; }
+        .loading {
+            color: #ffd43b;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 API Test Dashboard</h1>
+        <p style="text-align: center; color: #ccc;">Test all APIs to diagnose issues</p>
+
+        <div class="test-section">
+            <h3>🧪 Basic API Test</h3>
+            <p>Test if the API endpoints are working at all</p>
+            <button onclick="testAPI()">Test API</button>
+            <div id="apiResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Test Signup Process</h3>
+            <p>Test the signup API with sample data</p>
+            <button onclick="testSignup()">Test Signup</button>
+            <div id="signupResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Brackets Retrieval</h3>
+            <p>Test if we can retrieve brackets data</p>
+            <button onclick="testBrackets()">Test Brackets</button>
+            <button onclick="testBracket()">Test Bracket (singular)</button>
+            <div id="bracketsResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🗑️ Test Remove Team</h3>
+            <p>Test the remove team functionality</p>
+            <button onclick="testRemoveTeam()">Test Remove Team</button>
+            <div id="removeResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔄 Full Flow Test</h3>
+            <p>Test the complete signup → view → remove flow</p>
+            <button onclick="testFullFlow()">Test Full Flow</button>
+            <div id="flowResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        function showResult(elementId, content, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = content;
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.textContent = 'Loading...';
+            element.style.display = 'block';
+            element.className = 'result loading';
+        }
+
+        async function testAPI() {
+            showLoading('apiResult');
+            try {
+                const response = await fetch('/api/test');
+                const data = await response.json();
+                showResult('apiResult', `Status: ${response.status}\\n${JSON.stringify(data, null, 2)}`, !response.ok);
+            } catch (error) {
+                showResult('apiResult', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function testSignup() {
+            showLoading('signupResult');
+            try {
+                const testData = {
+                    discord: 'TestUser#1234',
+                    roblox: 'TestRoblox1',
+                    rank: 'Gold',
+                    duo_discord: 'TestDuo#5678',
+                    duo_roblox: 'TestRoblox2',
+                    duo_rank: 'Gold',
+                    extra_field: ''
+                };
+
+                const response = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const data = await response.json();
+                showResult('signupResult', `Status: ${response.status}\\n${JSON.stringify(data, null, 2)}`, !response.ok);
+            } catch (error) {
+                showResult('signupResult', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function testBrackets() {
+            showLoading('bracketsResult');
+            try {
+                const response = await fetch('/api/brackets');
+                const data = await response.json();
+                showResult('bracketsResult', `Status: ${response.status}\\nBrackets count: ${Object.keys(data).length}\\n${JSON.stringify(data, null, 2)}`, !response.ok);
+            } catch (error) {
+                showResult('bracketsResult', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function testBracket() {
+            showLoading('bracketsResult');
+            try {
+                const response = await fetch('/api/bracket');
+                const data = await response.json();
+                showResult('bracketsResult', `Status: ${response.status}\\nBracket count: ${Object.keys(data).length}\\n${JSON.stringify(data, null, 2)}`, !response.ok);
+            } catch (error) {
+                showResult('bracketsResult', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function testRemoveTeam() {
+            showLoading('removeResult');
+            try {
+                const testData = {
+                    bracketId: 'BKT-NONEXISTENT'
+                };
+
+                const response = await fetch('/api/remove-team', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const data = await response.json();
+                showResult('removeResult', `Status: ${response.status}\\n${JSON.stringify(data, null, 2)}`, !response.ok);
+            } catch (error) {
+                showResult('removeResult', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function testFullFlow() {
+            showLoading('flowResult');
+            let log = [];
+            
+            try {
+                // Step 1: Test API
+                log.push('1. Testing basic API...');
+                const apiResponse = await fetch('/api/test');
+                const apiData = await apiResponse.json();
+                log.push(`   ✓ API Status: ${apiResponse.status}`);
+                log.push(`   ✓ GitHub Token: ${apiData.environment?.hasGitHubToken ? 'Present' : 'Missing'}`);
+
+                // Step 2: Test Signup
+                log.push('\\n2. Testing signup...');
+                const signupData = {
+                    discord: `FlowTest#${Math.floor(Math.random() * 9999)}`,
+                    roblox: `FlowTestRoblox${Math.floor(Math.random() * 999)}`,
+                    rank: 'Gold',
+                    duo_discord: `FlowTestDuo#${Math.floor(Math.random() * 9999)}`,
+                    duo_roblox: `FlowTestDuoRoblox${Math.floor(Math.random() * 999)}`,
+                    duo_rank: 'Gold',
+                    extra_field: ''
+                };
+
+                const signupResponse = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(signupData)
+                });
+
+                const signupResult = await signupResponse.json();
+                log.push(`   ${signupResponse.ok ? '✓' : '✗'} Signup Status: ${signupResponse.status}`);
+                
+                let bracketId = null;
+                if (signupResponse.ok && signupResult.bracketId) {
+                    bracketId = signupResult.bracketId;
+                    log.push(`   ✓ Bracket ID created: ${bracketId}`);
+                } else {
+                    log.push(`   ✗ Signup failed: ${signupResult.error || 'Unknown error'}`);
+                }
+
+                // Step 3: Test Retrieval
+                log.push('\\n3. Testing brackets retrieval...');
+                const bracketsResponse = await fetch('/api/bracket');
+                const bracketsData = await bracketsResponse.json();
+                log.push(`   ${bracketsResponse.ok ? '✓' : '✗'} Brackets Status: ${bracketsResponse.status}`);
+                log.push(`   ✓ Total brackets: ${Object.keys(bracketsData).length}`);
+
+                if (bracketId && bracketsData[bracketId]) {
+                    log.push(`   ✓ Created bracket found in data`);
+                } else if (bracketId) {
+                    log.push(`   ✗ Created bracket NOT found in data`);
+                }
+
+                // Step 4: Test Removal (if bracket was created)
+                if (bracketId) {
+                    log.push('\\n4. Testing team removal...');
+                    const removeResponse = await fetch('/api/remove-team', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ bracketId })
+                    });
+
+                    const removeResult = await removeResponse.json();
+                    log.push(`   ${removeResponse.ok ? '✓' : '✗'} Remove Status: ${removeResponse.status}`);
+                    
+                    if (removeResponse.ok) {
+                        log.push(`   ✓ Team removed successfully`);
+                    } else {
+                        log.push(`   ✗ Remove failed: ${removeResult.error || 'Unknown error'}`);
+                    }
+                }
+
+                showResult('flowResult', log.join('\\n'), false);
+
+            } catch (error) {
+                log.push(`\\n❌ Flow test failed: ${error.message}`);
+                showResult('flowResult', log.join('\\n'), true);
+            }
+        }
+    </script>
+</body>
+</html>

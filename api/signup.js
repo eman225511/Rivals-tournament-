@@ -39,14 +39,34 @@ async function loadBracketsFromGitHub() {
 
     if (response.ok) {
       const data = await response.json();
-      const content = Buffer.from(data.content, 'base64').toString('utf8');
-      const parsed = JSON.parse(content);
-      console.log('Loaded brackets from GitHub:', Object.keys(parsed).length, 'entries');
-      return parsed;
+      // Better base64 decoding for edge runtime
+      let content;
+      try {
+        // Edge-runtime compatible base64 decoding
+        try {
+          const binaryString = atob(data.content.replace(/\s/g, ''));
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          content = new TextDecoder('utf-8').decode(bytes);
+        } catch (decodeError) {
+          console.error('Base64 decode failed:', decodeError);
+          // Fallback: try direct parsing if it's already a string
+          content = data.content;
+        }
+        const parsed = JSON.parse(content);
+        console.log('Loaded brackets from GitHub:', Object.keys(parsed).length, 'entries');
+        return parsed;
+      } catch (parseError) {
+        console.error('Failed to parse GitHub content:', parseError);
+        return brackets;
+      }
     } else if (response.status === 404) {
       console.log('Brackets file not found in GitHub, creating new one');
-      await saveBracketsToGitHub({});
-      return {};
+      const newData = {};
+      await saveBracketsToGitHub(newData);
+      return newData;
     } else {
       console.error('Failed to load from GitHub:', response.status, response.statusText);
       return brackets;
@@ -88,8 +108,8 @@ async function saveBracketsToGitHub(bracketsData) {
       console.log('File does not exist yet, will create new');
     }
 
-    // Create or update the file
-    const content = Buffer.from(JSON.stringify(bracketsData, null, 2)).toString('base64');
+    // Create or update the file - use edge-runtime compatible encoding
+    const content = btoa(JSON.stringify(bracketsData, null, 2));
     
     const updateData = {
       message: `Update brackets data - ${new Date().toISOString()}`,
@@ -135,8 +155,10 @@ const signupWebhook = "https://discordapp.com/api/webhooks/1392260390393745408/G
 const bracketsWebhook = "https://discordapp.com/api/webhooks/1392260441547341876/BzjuPZhvsjRFZSkcptLKakK8GjFPUlX0obbsBHbHL5RzRzatyPNuLg6Jmgrj-f9-aBXz";
 
 export default async function handler(req, res) {
+  console.log('=== SIGNUP API START ===');
   console.log('Request method:', req.method);
-  console.log('Request headers:', req.headers);
+  console.log('Request headers:', Object.keys(req.headers));
+  console.log('GitHub token available:', !!process.env.GITHUB_TOKEN);
   
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -154,7 +176,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Only POST method allowed' });
   }
 
-  console.log('Received signup request:', req.body);
+  console.log('Received signup request body:', JSON.stringify(req.body, null, 2));
 
   try {
     const {
@@ -291,7 +313,16 @@ export default async function handler(req, res) {
 
 // Export function to get brackets for api/brackets.js
 export async function getBrackets() {
-  // Try to load fresh data from GitHub
-  const githubBrackets = await loadBracketsFromGitHub();
-  return githubBrackets;
+  // Try to load fresh data from GitHub first
+  try {
+    const githubBrackets = await loadBracketsFromGitHub();
+    if (githubBrackets && Object.keys(githubBrackets).length >= 0) {
+      return githubBrackets;
+    }
+  } catch (error) {
+    console.error('Failed to load from GitHub, using in-memory fallback:', error.message);
+  }
+  
+  // Fallback to in-memory storage
+  return brackets;
 }
