@@ -1,1 +1,15 @@
-{}
+{
+  "BKT-KIJY25": {
+    "bracketId": "BKT-KIJY25",
+    "rank": "Bronze",
+    "player1": {
+      "discord": "TestUser#1234",
+      "roblox": "TestRobloxUser"
+    },
+    "player2": {
+      "discord": "TestDuo#5678",
+      "roblox": "TestDuoRoblox"
+    },
+    "timestamp": "2025-07-17T23:08:53.634Z"
+  }
+}
