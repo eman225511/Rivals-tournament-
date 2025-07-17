@@ -176,6 +176,7 @@
         👥 Team Dashboard
       </a>
       <a href="admin.html" style="color: #666; text-decoration: none; font-size: 0.8rem; margin-left: 15px;">🔧</a>
+      <a href="test-dashboard.html" style="color: #666; text-decoration: none; font-size: 0.8rem; margin-left: 10px;" title="API Test Dashboard">🧪</a>
     </div>
 
     <div class="rules-box" id="rulesBox">
@@ -236,6 +237,14 @@
       </select>
 
       <input type="submit" value="🚀 Sign Up!" />
+      
+      <!-- Debug info -->
+      <div id="debugInfo" style="background: #1a1a2e; color: #ccc; padding: 10px; margin-top: 15px; border-radius: 5px; font-size: 0.9rem; display: none;">
+        <strong>🔍 Debug Info:</strong>
+        <div id="debugContent">Ready to submit...</div>
+        <button type="button" onclick="testFormData()" style="background: #666; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-top: 10px; cursor: pointer;">🧪 Test Form Data</button>
+        <button type="button" onclick="clearDebug()" style="background: #666; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-top: 10px; margin-left: 5px; cursor: pointer;">🗑️ Clear Debug</button>
+      </div>
     </form>
 
     <div id="message"></div>
@@ -259,6 +268,46 @@
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
       };
+    }
+
+    // Debug function to show what's happening
+    function updateDebugInfo(message) {
+      const debugDiv = document.getElementById('debugInfo');
+      const debugContent = document.getElementById('debugContent');
+      debugDiv.style.display = 'block';
+      debugContent.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
+      console.log('DEBUG:', message);
+    }
+
+    // Test function to check form data
+    function testFormData() {
+      updateDebugInfo('🧪 Testing form data collection...');
+      
+      const formData = {
+        discord: document.getElementById("discord").value.trim(),
+        roblox: document.getElementById("roblox").value.trim(),
+        rank: document.getElementById("rank").value,
+        duo_discord: document.getElementById("duo_discord").value.trim(),
+        duo_roblox: document.getElementById("duo_roblox").value.trim(),
+        duo_rank: document.getElementById("duo_rank").value,
+        extra_field: document.querySelector('input[name="extra_field"]').value
+      };
+      
+      updateDebugInfo('📋 Current form data: ' + JSON.stringify(formData, null, 2));
+      
+      // Check if form inputs are enabled
+      const submitButton = signupForm.querySelector('input[type="submit"]');
+      updateDebugInfo('🔘 Submit button enabled: ' + !submitButton.disabled);
+      updateDebugInfo('📝 Form loading state: ' + isLoading);
+      
+      // Check rules acceptance
+      const allChecked = [...checkboxes].every(box => box.checked);
+      updateDebugInfo('✅ All rules checked: ' + allChecked);
+      updateDebugInfo('🔒 Accept button disabled: ' + acceptBtn.disabled);
+    }
+
+    function clearDebug() {
+      document.getElementById('debugContent').innerHTML = 'Debug cleared...';
     }
 
     // Set loading state for entire form
@@ -362,6 +411,8 @@
     const debouncedAccept = debounce(() => {
       if (isLoading || acceptBtn.disabled) return;
       
+      updateDebugInfo('🎯 Rules accepted, enabling form inputs');
+      
       acceptBtn.textContent = "✅ Rules Acknowledged";
       acceptBtn.disabled = true;
       acceptBtn.classList.remove("enabled");
@@ -374,6 +425,8 @@
       // Stop glowing animation on rules box
       document.getElementById("rulesBox").style.animation = "none";
       
+      updateDebugInfo('📝 Form inputs are now enabled for signup');
+      
       // Smooth scroll to form
       signupForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 300);
@@ -385,13 +438,19 @@
       signupForm.querySelectorAll("input, select").forEach(el => {
         if (!el.classList.contains("honeypot")) el.disabled = true;
       });
+      
+      // Show debug info automatically in development
+      updateDebugInfo('✅ Page loaded, form initialized');
+      updateDebugInfo('📝 Form inputs disabled until rules accepted');
     });
 
     const debouncedSubmit = debounce(async (e) => {
       e.preventDefault();
+      updateDebugInfo('🚀 Form submission started');
       console.log('🚀 Form submission started');
 
       if (isLoading) {
+        updateDebugInfo('❌ Form submission blocked: already loading');
         console.log('❌ Form submission blocked: already loading');
         return;
       }
@@ -399,9 +458,12 @@
       // Honeypot check
       const honeypotValue = signupForm.querySelector('input[name="extra_field"]').value;
       if (honeypotValue !== "") {
+        updateDebugInfo('❌ Form submission blocked: honeypot triggered');
         console.log('❌ Form submission blocked: honeypot triggered');
         return;
       }
+
+      updateDebugInfo('✅ Collecting form data...');
 
       const formData = {
         discord: document.getElementById("discord").value.trim(),
@@ -414,62 +476,77 @@
       };
 
       console.log('📝 Form data:', formData);
+      updateDebugInfo('📝 Form data collected: ' + JSON.stringify(formData));
 
       // Validation
       if (!formData.discord || !formData.roblox || !formData.rank || 
           !formData.duo_discord || !formData.duo_roblox || !formData.duo_rank) {
         console.log('❌ Form validation failed: missing fields');
+        updateDebugInfo('❌ Form validation failed: missing fields');
         showMessage("❌ Please fill in all fields!", "error");
         return;
       }
 
       if (formData.discord === formData.duo_discord || formData.roblox === formData.duo_roblox) {
         console.log('❌ Form validation failed: duplicate players');
+        updateDebugInfo('❌ Form validation failed: duplicate players');
         showMessage("❌ Player names must be different!", "error");
         return;
       }
 
       if (formData.rank !== formData.duo_rank) {
         console.log('❌ Form validation failed: rank mismatch');
+        updateDebugInfo('❌ Form validation failed: rank mismatch');
         showMessage("❌ Both players must have the SAME rank!", "error");
         return;
-      }        console.log('✅ Form validation passed, starting API call');
-        setLoading(true);
+      }
 
-        try {
-          console.log('Submitting form data:', formData);
-          
-          const res = await fetch("/api/signup", {
-            method: "POST",
-            headers: { 
-              "Content-Type": "application/json",
-              "Accept": "application/json"
-            },
-            body: JSON.stringify(formData)
-          });
-          
-          console.log('Response status:', res.status);
-          console.log('Response ok:', res.ok);
-          
-          let result;
-          const contentType = res.headers.get('content-type');
-          console.log('Content-Type:', contentType);
-          
-          if (contentType && contentType.includes('application/json')) {
-            try {
-              result = await res.json();
-              console.log('Response data:', result);
-            } catch (parseError) {
-              console.error('Failed to parse JSON response:', parseError);
-              const textResponse = await res.text();
-              console.log('Raw response:', textResponse);
-              throw new Error(`Server returned invalid JSON response. Status: ${res.status}`);
-            }
-          } else {
+      console.log('✅ Form validation passed, starting API call');
+      updateDebugInfo('✅ Form validation passed, starting API call');
+      setLoading(true);
+
+      try {
+        console.log('🔄 Submitting form data to /api/signup:', formData);
+        updateDebugInfo('🔄 Submitting to /api/signup...');
+        
+        // Add a small delay to show loading state
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const res = await fetch("/api/signup", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        console.log('📡 Response received - Status:', res.status, 'OK:', res.ok);
+        console.log('📡 Response headers:', [...res.headers.entries()]);
+        updateDebugInfo(`📡 Response: ${res.status} ${res.ok ? 'OK' : 'ERROR'}`);
+        
+        let result;
+        const contentType = res.headers.get('content-type');
+        console.log('📡 Content-Type:', contentType);
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            result = await res.json();
+            console.log('📦 Response data:', result);
+            updateDebugInfo('📦 Response parsed successfully');
+          } catch (parseError) {
+            console.error('❌ Failed to parse JSON response:', parseError);
             const textResponse = await res.text();
-            console.log('Non-JSON response:', textResponse);
-            throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
+            console.log('📄 Raw response:', textResponse);
+            updateDebugInfo('❌ Failed to parse JSON: ' + parseError.message);
+            throw new Error(`Server returned invalid JSON response. Status: ${res.status}`);
           }
+        } else {
+          const textResponse = await res.text();
+          console.log('📄 Non-JSON response:', textResponse);
+          updateDebugInfo('📄 Non-JSON response received');
+          throw new Error(`Server returned non-JSON response. Status: ${res.status}`);
+        }
 
         if (res.ok && result.success) {
           showMessage(`✅ You're signed up! Your Bracket ID: ${result.bracketId}. Redirecting to dashboard...`, "success");
@@ -485,7 +562,42 @@
           }, 2500);
         } else {
           const errorMessage = result?.error || `Server error (${res.status})`;
-          showMessage(`⚠️ Error: ${errorMessage}`, "error");
+          console.error('❌ Main signup failed:', errorMessage);
+          
+          // Try simple signup as fallback
+          console.log('🔄 Trying simple signup fallback...');
+          showMessage("⚠️ Main signup failed, trying backup method...", "error");
+          
+          try {
+            const simpleRes = await fetch("/api/signup-simple", {
+              method: "POST",
+              headers: { 
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+              },
+              body: JSON.stringify(formData)
+            });
+            
+            const simpleResult = await simpleRes.json();
+            console.log('📦 Simple signup result:', simpleResult);
+            
+            if (simpleRes.ok && simpleResult.success) {
+              showMessage(`✅ You're signed up! Your Bracket ID: ${simpleResult.bracketId}. Redirecting to dashboard...`, "success");
+              
+              sessionStorage.setItem('newSignupBracketId', simpleResult.bracketId);
+              sessionStorage.setItem('teamAuthenticated', 'true');
+              sessionStorage.setItem('bracketId', simpleResult.bracketId);
+              
+              setTimeout(() => {
+                window.location.href = 'dashboard.html';
+              }, 2500);
+            } else {
+              showMessage(`❌ Error: ${simpleResult?.error || errorMessage}`, "error");
+            }
+          } catch (fallbackError) {
+            console.error('❌ Fallback signup also failed:', fallbackError);
+            showMessage(`❌ Both signup methods failed. Error: ${errorMessage}`, "error");
+          }
         }
       } catch (err) {
         console.error('Fetch error:', err);
