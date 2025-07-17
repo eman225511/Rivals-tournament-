@@ -502,6 +502,7 @@
           setTimeout(() => {
             loadData();
             checkGitHubStatus();
+            loadSettings(); // Auto-load tournament settings
           }, 400);
         } else {
           const result = await response.json();
@@ -575,8 +576,13 @@
           adminKey = key;
           document.getElementById('loginOverlay').style.display = 'none';
           document.getElementById('adminContent').classList.add('authenticated');
-          loadData();
-          checkGitHubStatus();
+          
+          // Load initial data with a small delay to ensure UI is ready
+          setTimeout(() => {
+            loadData();
+            checkGitHubStatus();
+            loadSettings(); // Auto-load tournament settings for stored sessions
+          }, 100);
         } else {
           // Stored key is invalid, clear it
           logout();
