@@ -92,7 +92,8 @@
       color: #eee;
       font-size: 1rem;
     }
-    input[type="submit"] {
+    input[type="submit"],
+    #submitBtn {
       margin-top: 30px;
       width: 100%;
       background: #ffd43b;
@@ -106,19 +107,23 @@
       transition: 0.3s;
       position: relative;
     }
-    input[type="submit"]:hover:not(:disabled) {
+    input[type="submit"]:hover:not(:disabled),
+    #submitBtn:hover:not(:disabled) {
       background: #f9d900;
       box-shadow: 0 0 12px #f9d900aa;
     }
-    input[type="submit"]:disabled {
+    input[type="submit"]:disabled,
+    #submitBtn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       background: #999;
     }
-    input[type="submit"].loading {
+    input[type="submit"].loading,
+    #submitBtn.loading {
       color: transparent;
     }
-    input[type="submit"].loading::after {
+    input[type="submit"].loading::after,
+    #submitBtn.loading::after {
       content: "⏳";
       position: absolute;
       left: 50%;
@@ -236,7 +241,7 @@
         <option value="Archnemesis">🌟 Archnemesis</option>
       </select>
 
-      <input type="submit" value="🚀 Sign Up!" />
+      <input type="button" value="🚀 Sign Up!" id="submitBtn" style="margin-top: 30px; width: 100%; background: #ffd43b; border: none; padding: 15px; border-radius: 12px; font-weight: 700; font-size: 1.1rem; color: #282843; cursor: pointer; transition: 0.3s; position: relative;" />
       
       <!-- Debug info -->
       <div id="debugInfo" style="background: #1a1a2e; color: #ccc; padding: 10px; margin-top: 15px; border-radius: 5px; font-size: 0.9rem; display: none;">
@@ -296,7 +301,7 @@
       updateDebugInfo('📋 Current form data: ' + JSON.stringify(formData, null, 2));
       
       // Check if form inputs are enabled
-      const submitButton = signupForm.querySelector('input[type="submit"]');
+      const submitButton = document.getElementById('submitBtn');
       updateDebugInfo('🔘 Submit button enabled: ' + !submitButton.disabled);
       updateDebugInfo('📝 Form loading state: ' + isLoading);
       
@@ -313,7 +318,7 @@
     // Set loading state for entire form
     function setLoading(loading) {
       isLoading = loading;
-      const submitButton = signupForm.querySelector('input[type="submit"]');
+      const submitButton = document.getElementById('submitBtn');
       const allInputs = signupForm.querySelectorAll('input:not(.honeypot), select');
       
       if (submitButton) {
@@ -442,6 +447,12 @@
       // Show debug info automatically in development
       updateDebugInfo('✅ Page loaded, form initialized');
       updateDebugInfo('📝 Form inputs disabled until rules accepted');
+      updateDebugInfo('🔗 Event listeners attached to form');
+      
+      // Verify event listeners are working
+      const submitBtn = document.getElementById('submitBtn');
+      updateDebugInfo(`🔘 Submit button found: ${!!submitBtn}`);
+      updateDebugInfo(`📋 Form element found: ${!!signupForm}`);
     });
 
     const debouncedSubmit = debounce(async (e) => {
@@ -618,7 +629,27 @@
       }
     }, 500);
 
-    signupForm.addEventListener("submit", debouncedSubmit);
+    // Add event listeners for form submission
+    signupForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      updateDebugInfo('📋 Form submit event triggered');
+      debouncedSubmit(e);
+    });
+    
+    // Add click handler to submit button
+    document.addEventListener('DOMContentLoaded', () => {
+      const submitBtn = document.getElementById('submitBtn');
+      if (submitBtn) {
+        submitBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          updateDebugInfo('🖱️ Submit button clicked');
+          debouncedSubmit(e);
+        });
+        updateDebugInfo('🔗 Submit button event listener attached');
+      } else {
+        updateDebugInfo('❌ Submit button not found!');
+      }
+    });
   </script>
 </body>
 </html>
