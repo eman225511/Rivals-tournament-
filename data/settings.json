@@ -1,0 +1,18 @@
+{
+  "maxTeamsPerRank": {
+    "Bronze": 50,
+    "Silver": 50,
+    "Gold": 50,
+    "Platinum": 50,
+    "Diamond": 50,
+    "Onyx": 50,
+    "Nemesis": 50,
+    "Archnemesis": 50
+  },
+  "registrationEnabled": false,
+  "tournamentStarted": false,
+  "tournamentName": "Rivals Duo Tournament",
+  "tournamentDate": null,
+  "lastUpdated": "2025-07-17T23:18:16.198Z",
+  "updatedBy": "Admin Panel"
+}
