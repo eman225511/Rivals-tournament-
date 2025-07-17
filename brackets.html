@@ -218,22 +218,24 @@
       try {
         console.log('Fetching brackets data...');
         
-        let response = await fetch('/api/brackets-public', {
+        let response = await fetch(`/api/brackets-public?t=${Date.now()}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
           }
         });
         
         // If public API fails, try the regular API but sanitize the data
         if (!response.ok) {
           console.warn('Public API failed, falling back to regular API and sanitizing data');
-          response = await fetch('/api/brackets', {
+          response = await fetch(`/api/brackets?t=${Date.now()}`, {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache'
             }
           });
         }
@@ -258,14 +260,34 @@
         }
         
         loading.style.display = 'none';
-        bracketsData = data;
         
-        // Debug logging
-        console.log('API Response:', data);
-        console.log('Data type:', typeof data);
-        console.log('Object keys:', Object.keys(data));
+        // AGGRESSIVE DATA SANITIZATION - Remove ALL possible bracket ID references
+        const sanitizedData = {};
+        Object.entries(data).forEach(([originalId, team], index) => {
+          const teamNumber = index + 1;
+          sanitizedData[`public_team_${teamNumber}`] = {
+            rank: team.rank || 'Unknown',
+            player1: {
+              discord: team.player1?.discord || 'Unknown',
+              roblox: team.player1?.roblox || 'Unknown'
+            },
+            player2: {
+              discord: team.player2?.discord || 'Unknown',
+              roblox: team.player2?.roblox || 'Unknown'
+            },
+            timestamp: team.timestamp || new Date().toISOString()
+            // NO bracketId, NO id, NO sensitive data
+          };
+        });
         
-        if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+        bracketsData = sanitizedData;
+        
+        // Debug logging (safe now since data is sanitized)
+        console.log('Sanitized API Response:', sanitizedData);
+        console.log('Data type:', typeof sanitizedData);
+        console.log('Object keys:', Object.keys(sanitizedData));
+        
+        if (!sanitizedData || typeof sanitizedData !== 'object' || Object.keys(sanitizedData).length === 0) {
           container.innerHTML = `
             <div class="no-teams">
               🚫 No teams have signed up yet.<br>
@@ -277,22 +299,15 @@
 
         downloadBtn.style.display = 'block';
         
-        // Group by rank
+        // Group by rank using sanitized data
         const rankGroups = {};
-        Object.entries(data).forEach(([id, entry]) => {
+        Object.entries(sanitizedData).forEach(([publicId, entry]) => {
           const rank = entry.rank || 'Unknown';
           if (!rankGroups[rank]) {
             rankGroups[rank] = [];
           }
-          // Remove any bracket ID references for security
-          const cleanEntry = {
-            rank: entry.rank,
-            player1: entry.player1,
-            player2: entry.player2,
-            timestamp: entry.timestamp
-            // Explicitly exclude any ID fields
-          };
-          rankGroups[rank].push({ id: `team_${Object.keys(rankGroups[rank] || {}).length + 1}`, ...cleanEntry });
+          // Data is already clean, just add it
+          rankGroups[rank].push({ id: publicId, ...entry });
         });
 
         // Sort ranks by typical ranking order
@@ -391,14 +406,15 @@
       downloadBtn.classList.add('loading');
       
       try {
-        // Create public version of data for download (no sensitive bracket IDs)
+        // Data is already sanitized, just rename for download
         const publicData = {};
         Object.entries(bracketsData).forEach(([id, team], index) => {
-          publicData[`team_${index + 1}`] = {
+          publicData[`tournament_team_${index + 1}`] = {
             rank: team.rank,
             player1: team.player1,
             player2: team.player2,
             timestamp: team.timestamp
+            // No sensitive IDs in download either
           };
         });
         
