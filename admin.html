@@ -364,6 +364,19 @@
       <h3>🔧 Admin Tools</h3>
       <button class="btn" onclick="debounce(() => generateTestData(), 500, 'generateTestDataBtn')">🎯 Generate Test Data</button>
       <button class="btn" onclick="debounce(() => validateData(), 1000, 'validateDataBtn')">✅ Validate Data Integrity</button>
+      
+      <div style="margin-top: 20px; padding: 15px; background: #1a1a2e; border-radius: 8px;">
+        <h4 style="color: #ffd43b; margin-bottom: 15px;">🗑️ Delete Team by ID</h4>
+        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+          <input type="text" id="deleteTeamId" placeholder="Enter Bracket ID (e.g., BKT-ABC123)" 
+                 style="flex: 1; padding: 8px; border-radius: 5px; border: none; background: #3a3a6f; color: #eee;">
+          <button class="btn" onclick="debounce(() => deleteTeamById(), 500, 'deleteTeamBtn')" style="background: #dc3545;">🗑️ Delete Team</button>
+        </div>
+        <div style="font-size: 0.9rem; color: #ccc;">
+          ⚠️ This will permanently remove the team from the tournament
+        </div>
+      </div>
+      
       <div id="admin-tools-output"></div>
     </div>
 
@@ -1207,6 +1220,63 @@
           statusDiv.style.display = 'none';
         }, 5000);
       }
+    }
+
+    // Delete team by ID function
+    async function deleteTeamById() {
+      if (isLoading) return;
+      
+      const teamId = document.getElementById('deleteTeamId').value.trim();
+      const outputDiv = document.getElementById('admin-tools-output');
+      
+      if (!teamId) {
+        outputDiv.innerHTML = '<div style="color: #dc3545; padding: 10px; background: rgba(220, 53, 69, 0.1); border-radius: 5px; margin-top: 10px;">❌ Please enter a Bracket ID</div>';
+        return;
+      }
+      
+      if (!adminKey) {
+        outputDiv.innerHTML = '<div style="color: #dc3545; padding: 10px; background: rgba(220, 53, 69, 0.1); border-radius: 5px; margin-top: 10px;">❌ Authentication required</div>';
+        return;
+      }
+      
+      if (!confirm(`⚠️ Are you sure you want to delete team "${teamId}"? This action cannot be undone!`)) {
+        return;
+      }
+      
+      debounce(async () => {
+        setLoadingState(true);
+        
+        try {
+          outputDiv.innerHTML = '<div style="color: #ffd43b; padding: 10px; background: rgba(255, 212, 59, 0.1); border-radius: 5px; margin-top: 10px;">🔄 Deleting team...</div>';
+          
+          const response = await fetch('/api/remove-team', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Admin-Key': adminKey
+            },
+            body: JSON.stringify({ bracketId: teamId })
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            outputDiv.innerHTML = `<div style="color: #28a745; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 5px; margin-top: 10px;">✅ Team "${teamId}" deleted successfully!</div>`;
+            document.getElementById('deleteTeamId').value = ''; // Clear input
+            
+            // Refresh the data display
+            await loadData();
+            await loadRegistrationStatus();
+          } else {
+            outputDiv.innerHTML = `<div style="color: #dc3545; padding: 10px; background: rgba(220, 53, 69, 0.1); border-radius: 5px; margin-top: 10px;">❌ Failed to delete team: ${result.error || 'Unknown error'}</div>`;
+          }
+        } catch (error) {
+          outputDiv.innerHTML = `<div style="color: #dc3545; padding: 10px; background: rgba(220, 53, 69, 0.1); border-radius: 5px; margin-top: 10px;">❌ Error: ${error.message}</div>`;
+          console.error('Delete team failed:', error);
+        } finally {
+          setLoadingState(false);
+        }
+      }, 500, 'deleteTeam');
     }
 
     // Auto-load settings when admin panel loads

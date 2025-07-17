@@ -110,7 +110,7 @@ export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key');
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method === 'OPTIONS') {
@@ -121,6 +121,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ 
       success: false, 
       error: 'Method not allowed. Use POST.' 
+    });
+  }
+
+  // Check admin authentication
+  const adminKey = req.headers['x-admin-key'] || req.body?.adminKey;
+  const expectedKey = process.env.ADMIN_KEY || 'tournament2024';
+  
+  if (adminKey !== expectedKey) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Admin access required'
     });
   }
 
