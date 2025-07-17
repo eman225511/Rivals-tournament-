@@ -1,15 +1,11 @@
 // Public registration status API that reads settings directly from GitHub
 // This allows the signup page to check registration status without admin authentication
 
-const { Octokit } = require("@octokit/rest");
-
-// Initialize Octokit with GitHub token
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN,
-});
-
-const REPO_OWNER = process.env.GITHUB_REPO_OWNER || "eman225511";
-const REPO_NAME = process.env.GITHUB_REPO_NAME || "Rivals-tournament-";
+// GitHub-based storage (same pattern as other APIs)
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_REPO = 'eman225511/Rivals-tournament-';
+const SETTINGS_FILE_PATH = 'data/settings.json';
+const BRACKETS_FILE_PATH = 'data/brackets.json';
 
 // Default settings that allow registration
 const DEFAULT_SETTINGS = {
@@ -22,15 +18,22 @@ const DEFAULT_SETTINGS = {
   }
 };
 
-// Read settings directly from GitHub
+// Read settings directly from GitHub using fetch API
 async function getSettings() {
   try {
-    const { data } = await octokit.rest.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: 'data/settings.json',
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${SETTINGS_FILE_PATH}`, {
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Rivals-Tournament-App'
+      }
     });
 
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+
+    const data = await response.json();
     const content = Buffer.from(data.content, 'base64').toString('utf-8');
     const settings = JSON.parse(content);
     
@@ -45,12 +48,19 @@ async function getSettings() {
 // Get current registration counts
 async function getRegistrationCounts() {
   try {
-    const { data } = await octokit.rest.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: 'data/brackets.json',
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${BRACKETS_FILE_PATH}`, {
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Rivals-Tournament-App'
+      }
     });
 
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+
+    const data = await response.json();
     const content = Buffer.from(data.content, 'base64').toString('utf-8');
     const brackets = JSON.parse(content);
     
