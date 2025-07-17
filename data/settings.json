@@ -9,10 +9,10 @@
     "Nemesis": 50,
     "Archnemesis": 50
   },
-  "registrationEnabled": false,
+  "registrationEnabled": true,
   "tournamentStarted": false,
   "tournamentName": "Rivals Duo Tournament",
   "tournamentDate": null,
-  "lastUpdated": "2025-07-17T23:28:21.656Z",
+  "lastUpdated": "2025-07-17T23:34:45.984Z",
   "updatedBy": "Admin Panel"
 }
