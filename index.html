@@ -249,10 +249,127 @@
 
   <script>
     let isLoading = false;
+    let registrationEnabled = true; // Will be checked from server
     
     const acceptBtn = document.getElementById("acceptBtn");
     const checkboxes = document.querySelectorAll(".rule-check");
     const signupForm = document.getElementById("signupForm");
+
+    // Check if registration is enabled
+    async function checkRegistrationStatus() {
+      try {
+        const response = await fetch('/api/admin-settings', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const settings = result.settings || {};
+          registrationEnabled = settings.registrationEnabled !== false && settings.tournamentStarted !== true;
+          
+          if (!registrationEnabled) {
+            showRegistrationClosed(settings.tournamentStarted);
+          }
+        }
+      } catch (error) {
+        console.log('Could not check registration status, assuming enabled');
+        // Don't block registration if we can't check status
+      }
+    }
+
+    // Show registration closed message
+    function showRegistrationClosed(tournamentStarted) {
+      const container = document.querySelector('.container');
+      
+      let message, subtitle, backgroundColor, borderColor;
+      
+      if (tournamentStarted) {
+        message = '🏁 Tournament in Progress!';
+        subtitle = 'Registration is now closed - The tournament has already started! Check the brackets to see the current matches.';
+        backgroundColor = 'linear-gradient(135deg, #ff6b35, #f7931e)';
+        borderColor = '#cc5500';
+      } else {
+        message = '🚫 Registration Temporarily Disabled';
+        subtitle = 'Registration is currently disabled by administrators. Please check back later or contact an administrator for more information.';
+        backgroundColor = 'linear-gradient(135deg, #dc3545, #c82333)';
+        borderColor = '#721c24';
+      }
+      
+      const closedNotice = document.createElement('div');
+      closedNotice.style.cssText = `
+        background: ${backgroundColor};
+        color: white;
+        padding: 25px;
+        border-radius: 15px;
+        text-align: center;
+        margin-bottom: 25px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        border: 3px solid ${borderColor};
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        animation: attention-pulse 2s ease-in-out infinite;
+      `;
+      
+      closedNotice.innerHTML = `
+        <div style="font-size: 1.5rem; margin-bottom: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${message}</div>
+        <div style="font-size: 1rem; opacity: 0.95; line-height: 1.4;">${subtitle}</div>
+        ${tournamentStarted ? `
+          <div style="margin-top: 15px;">
+            <a href="brackets" style="
+              display: inline-block;
+              background: rgba(255,255,255,0.2);
+              color: white;
+              text-decoration: none;
+              padding: 10px 20px;
+              border-radius: 8px;
+              font-weight: bold;
+              transition: 0.3s;
+              border: 2px solid rgba(255,255,255,0.3);
+            " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+              🏆 View Current Brackets
+            </a>
+          </div>
+        ` : ''}
+      `;
+      
+      // Add CSS animation for attention-grabbing pulse
+      if (!document.querySelector('#attention-pulse-style')) {
+        const style = document.createElement('style');
+        style.id = 'attention-pulse-style';
+        style.textContent = `
+          @keyframes attention-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+            50% { transform: scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      // Insert after the title but before the navigation
+      const title = container.querySelector('h1');
+      title.insertAdjacentElement('afterend', closedNotice);
+      
+      // Disable the entire signup process
+      const rulesBox = document.getElementById('rulesBox');
+      const acceptButton = document.getElementById('acceptBtn');
+      const signupForm = document.getElementById('signupForm');
+      
+      rulesBox.style.opacity = '0.5';
+      rulesBox.style.pointerEvents = 'none';
+      acceptButton.style.opacity = '0.3';
+      acceptButton.style.pointerEvents = 'none';
+      acceptButton.textContent = '🚫 Registration Closed';
+      signupForm.style.opacity = '0.5';
+      signupForm.style.pointerEvents = 'none';
+      
+      // Disable all form elements
+      signupForm.querySelectorAll('input, select, button').forEach(el => {
+        el.disabled = true;
+      });
+    }
 
     // Debounce function to prevent spam
     function debounce(func, wait) {
@@ -479,6 +596,9 @@
       signupForm.querySelectorAll("input, select").forEach(el => {
         if (!el.classList.contains("honeypot")) el.disabled = true;
       });
+      
+      // Check registration status when page loads
+      checkRegistrationStatus();
     });
 
     const debouncedSubmit = debounce(async (e) => {
@@ -487,6 +607,13 @@
 
       if (isLoading) {
         console.log('❌ Form submission blocked: already loading');
+        return;
+      }
+
+      // Check if registration is enabled
+      if (!registrationEnabled) {
+        console.log('❌ Form submission blocked: registration disabled');
+        showMessage("❌ Registration is currently closed!", "error");
         return;
       }
 
@@ -582,7 +709,21 @@
           const errorMessage = result?.error || `Server error (${res.status})`;
           console.error('❌ Main signup failed:', errorMessage);
           
-          // Try simple signup as fallback
+          // Show specific error messages for common issues
+          if (errorMessage.includes('Registration is currently disabled')) {
+            showMessage("❌ Registration is currently closed by administrators!", "error");
+            registrationEnabled = false; // Update local status
+            return; // Don't try fallback for disabled registration
+          } else if (errorMessage.includes('Tournament has already started')) {
+            showMessage("❌ Registration is closed - Tournament has already started!", "error");
+            registrationEnabled = false; // Update local status
+            return; // Don't try fallback for started tournament
+          } else if (errorMessage.includes('rank is full')) {
+            showMessage(`❌ ${errorMessage}`, "error");
+            return; // Don't try fallback for full ranks
+          }
+          
+          // Try simple signup as fallback for other errors
           console.log('🔄 Trying simple signup fallback...');
           showMessage("⚠️ Main signup failed, trying backup method...", "error");
           
