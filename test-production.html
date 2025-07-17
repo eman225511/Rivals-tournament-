@@ -107,6 +107,7 @@
       </div>
       <button class="test-button" onclick="testAPI('/api/signup', 'POST')">Test Signup API</button>
       <button class="test-button" onclick="testAPI('/api/bracket', 'GET')">Test Bracket API</button>
+      <button class="test-button" onclick="testAPI('/api/registration-status', 'GET')">Test Registration Status API</button>
       <button class="test-button" onclick="testAPI('/api/admin-settings', 'GET')">Test Admin Settings API</button>
       <div id="api-results"></div>
     </div>
@@ -124,6 +125,7 @@
       <h3>⚙️ Tournament Settings Tests</h3>
       <p>Test admin settings functionality:</p>
       <button class="test-button" onclick="testSettingsLoad()">Test Settings Load</button>
+      <button class="test-button" onclick="testRegistrationStatus()">Test Registration Status</button>
       <button class="test-button" onclick="testMaxTeamsLogic()">Test Max Teams Logic</button>
       <div id="settings-results"></div>
     </div>
@@ -348,6 +350,46 @@
             ❌ ${check.name}: ERROR - ${error.message}
           </div>`;
         }
+      }
+    }
+
+    async function testRegistrationStatus() {
+      const resultsDiv = document.getElementById('settings-results');
+      
+      try {
+        resultsDiv.innerHTML += '<div>Testing registration status API...</div>';
+        
+        const response = await fetch('/api/registration-status', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const status = result.status || {};
+          
+          resultsDiv.innerHTML += `<div class="result success">
+            ✅ Registration Status API: SUCCESS
+            <br><strong>Registration Enabled:</strong> ${status.registrationEnabled}
+            <br><strong>Tournament Started:</strong> ${status.tournamentStarted}
+            <br><strong>Is Registration Open:</strong> ${status.isRegistrationOpen}
+            <br><strong>Total Teams:</strong> ${status.totalTeams}
+            <br><strong>Tournament Name:</strong> ${status.tournamentName}
+            <br><strong>Registration Counts:</strong> ${JSON.stringify(status.registrationCounts)}
+          </div>`;
+        } else {
+          const errorText = await response.text();
+          resultsDiv.innerHTML += `<div class="result error">
+            ❌ Registration Status API: FAILED (${response.status})
+            <br>Error: ${errorText}
+          </div>`;
+        }
+      } catch (error) {
+        resultsDiv.innerHTML += `<div class="result error">
+          ❌ Registration Status API: ERROR - ${error.message}
+        </div>`;
       }
     }
 

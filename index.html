@@ -258,7 +258,7 @@
     // Check if registration is enabled
     async function checkRegistrationStatus() {
       try {
-        const response = await fetch('/api/admin-settings', {
+        const response = await fetch('/api/registration-status', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
@@ -267,11 +267,11 @@
 
         if (response.ok) {
           const result = await response.json();
-          const settings = result.settings || {};
-          registrationEnabled = settings.registrationEnabled !== false && settings.tournamentStarted !== true;
+          const status = result.status || {};
+          registrationEnabled = status.isRegistrationOpen !== false;
           
           if (!registrationEnabled) {
-            showRegistrationClosed(settings.tournamentStarted);
+            showRegistrationClosed(status.tournamentStarted);
           }
         }
       } catch (error) {
