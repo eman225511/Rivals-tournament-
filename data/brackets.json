@@ -1,1 +1,15 @@
-{}
+{
+  "BKT-GMX2HM": {
+    "bracketId": "BKT-GMX2HM",
+    "rank": "Gold",
+    "player1": {
+      "discord": "TestPlayer1#1234",
+      "roblox": "TestRoblox1"
+    },
+    "player2": {
+      "discord": "TestPlayer2#5678",
+      "roblox": "TestRoblox2"
+    },
+    "timestamp": "2025-07-17T23:17:28.479Z"
+  }
+}
