@@ -218,13 +218,25 @@
       try {
         console.log('Fetching brackets data...');
         
-        const response = await fetch('/api/brackets-public', {
+        let response = await fetch('/api/brackets-public', {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
           }
         });
+        
+        // If public API fails, try the regular API but sanitize the data
+        if (!response.ok) {
+          console.warn('Public API failed, falling back to regular API and sanitizing data');
+          response = await fetch('/api/brackets', {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+        }
         
         console.log('Response status:', response.status);
         console.log('Response ok:', response.ok);
@@ -272,7 +284,15 @@
           if (!rankGroups[rank]) {
             rankGroups[rank] = [];
           }
-          rankGroups[rank].push({ id, ...entry });
+          // Remove any bracket ID references for security
+          const cleanEntry = {
+            rank: entry.rank,
+            player1: entry.player1,
+            player2: entry.player2,
+            timestamp: entry.timestamp
+            // Explicitly exclude any ID fields
+          };
+          rankGroups[rank].push({ id: `team_${Object.keys(rankGroups[rank] || {}).length + 1}`, ...cleanEntry });
         });
 
         // Sort ranks by typical ranking order
