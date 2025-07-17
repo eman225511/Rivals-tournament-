@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🔐 Simple Login Test - Rivals Tournament</title>
+  <style>
+    body {
+      margin: 0; padding: 20px;
+      background: linear-gradient(135deg, #181823, #2b2a45);
+      color: #f0f0f5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #282843;
+      padding: 30px;
+      border-radius: 15px;
+    }
+    h1 { color: #ffd43b; text-align: center; }
+    .login-section {
+      background: #393962;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 10px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      background: #3a3a6f;
+      color: #eee;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      background: #ffd43b;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      color: #282843;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #f9d900;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #999;
+    }
+    .result {
+      background: #1a1a2e;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+    .success { color: #4caf50; }
+    .error { color: #f44336; }
+    .test-ids {
+      background: #2a2a4a;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 Simple Login Test</h1>
+    
+    <div class="test-ids">
+      <h3>📋 Test Bracket IDs (copy these exactly):</h3>
+      <div style="margin: 10px 0;">
+        <code onclick="copyToInput('BKT-GMX2HM')" style="cursor: pointer; padding: 5px; background: #1a1a2e; border-radius: 4px; display: inline-block; margin: 2px;">BKT-GMX2HM</code> (Gold)
+      </div>
+      <div style="margin: 10px 0;">
+        <code onclick="copyToInput('BKT-BMR36W')" style="cursor: pointer; padding: 5px; background: #1a1a2e; border-radius: 4px; display: inline-block; margin: 2px;">BKT-BMR36W</code> (Diamond)
+      </div>
+      <div style="margin: 10px 0;">
+        <code onclick="copyToInput('BKT-CGUXVF')" style="cursor: pointer; padding: 5px; background: #1a1a2e; border-radius: 4px; display: inline-block; margin: 2px;">BKT-CGUXVF</code> (Bronze)
+      </div>
+      <small style="color: #999;">💡 Click any ID above to auto-fill the input</small>
+    </div>
+
+    <div class="login-section">
+      <h3>🔐 Test Login</h3>
+      <input type="text" id="bracketId" placeholder="Enter Bracket ID (BKT-XXXXXX)" maxlength="10" />
+      <button onclick="testLogin()" id="loginBtn">🚀 Test Login</button>
+      <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="login-section">
+      <h3>🌐 Quick Links</h3>
+      <p><a href="dashboard.html" style="color: #ffd43b;">→ Go to Full Dashboard</a></p>
+      <p><a href="brackets.html" style="color: #ffd43b;">→ View Public Brackets</a></p>
+      <p><a href="index.html" style="color: #ffd43b;">→ Back to Signup</a></p>
+    </div>
+  </div>
+
+  <script>
+    function copyToInput(bracketId) {
+      document.getElementById('bracketId').value = bracketId;
+    }
+
+    async function testLogin() {
+      const bracketId = document.getElementById('bracketId').value.trim().toUpperCase();
+      const resultDiv = document.getElementById('result');
+      const btn = document.getElementById('loginBtn');
+      
+      if (!bracketId) {
+        showResult('Please enter a Bracket ID', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Testing...';
+      showResult('Testing login...', 'success');
+      
+      try {
+        const response = await fetch('/api/brackets');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data[bracketId]) {
+          const team = data[bracketId];
+          showResult(`✅ LOGIN SUCCESS!
+          
+Found team: ${bracketId}
+Rank: ${team.rank}
+Player 1: ${team.player1.roblox} (${team.player1.discord})
+Player 2: ${team.player2.roblox} (${team.player2.discord})
+Registered: ${new Date(team.timestamp).toLocaleString()}
+
+You can now use the dashboard with this Bracket ID!`, 'success');
+        } else {
+          showResult(`❌ LOGIN FAILED
+          
+Bracket ID "${bracketId}" not found.
+Available teams: ${Object.keys(data).length}
+          
+Make sure you're using the exact Bracket ID provided during signup.`, 'error');
+        }
+      } catch (error) {
+        showResult(`❌ ERROR
+        
+Failed to connect to API: ${error.message}
+        
+Check your internet connection and try again.`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🚀 Test Login';
+      }
+    }
+
+    function showResult(message, type) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = message;
+      resultDiv.className = `result ${type}`;
+      resultDiv.style.display = 'block';
+    }
+
+    // Simple input formatting (just uppercase, no auto-prefix)
+    document.getElementById('bracketId').addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+
+    // Enter key support
+    document.getElementById('bracketId').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        testLogin();
+      }
+    });
+  </script>
+</body>
+</html>

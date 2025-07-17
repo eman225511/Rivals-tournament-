@@ -255,9 +255,9 @@
       <h2>🎯 Team Login</h2>
       <p style="color: #ccc; margin-bottom: 20px;">Enter your Bracket ID to access your team dashboard</p>
       <div style="margin-bottom: 10px;">
-        <input type="text" id="bracketIdInput" class="login-input" placeholder="BKT-XXXXXX" maxlength="10" />
+        <input type="text" id="bracketIdInput" class="login-input" placeholder="BKT-ABC123" maxlength="10" />
         <div style="color: #999; font-size: 0.85rem; margin-top: 5px;">
-          💡 Your Bracket ID was provided when you signed up (format: BKT-ABC123)
+          💡 Enter your full Bracket ID (example: BKT-GMX2HM)
         </div>
       </div>
       <button class="login-btn" onclick="authenticateTeam()">🚀 Access Dashboard</button>
@@ -395,8 +395,9 @@
         return;
       }
 
-      if (!inputBracketId.startsWith('BKT-')) {
-        showLoginError('Bracket ID must start with BKT-');
+      // More flexible bracket ID validation
+      if (!inputBracketId.match(/^BKT-[A-Z0-9]{6}$/i)) {
+        showLoginError('Bracket ID should be in format: BKT-XXXXXX (6 characters after BKT-)');
         return;
       }
 
@@ -764,15 +765,16 @@
         }
       });
 
-      // Auto-format bracket ID input
+      // Simple bracket ID input formatting
       document.getElementById('bracketIdInput').addEventListener('input', (e) => {
-        let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (value.length > 0 && !value.startsWith('BKT-')) {
-          value = 'BKT-' + value;
-        }
+        // Just convert to uppercase and limit length, let user type freely
+        let value = e.target.value.toUpperCase();
+        
+        // Only limit the length
         if (value.length > 10) {
           value = value.substring(0, 10);
         }
+        
         e.target.value = value;
       });
     });
