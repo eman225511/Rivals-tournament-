@@ -11,5 +11,18 @@
       "roblox": "TestRoblox2"
     },
     "timestamp": "2025-07-17T23:17:28.479Z"
+  },
+  "BKT-BMR36W": {
+    "bracketId": "BKT-BMR36W",
+    "rank": "Diamond",
+    "player1": {
+      "discord": "ProPlayer1#9999",
+      "roblox": "ProRoblox1"
+    },
+    "player2": {
+      "discord": "ProPlayer2#8888",
+      "roblox": "ProRoblox2"
+    },
+    "timestamp": "2025-07-17T23:17:29.492Z"
   }
 }
