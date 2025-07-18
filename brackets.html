@@ -351,6 +351,7 @@
               <div class="bracket-entry">
                 <div class="bracket-header">
                   <span class="rank-badge">${team.rank}</span>
+                  <span style="margin-left: 10px;">Team</span>
                 </div>
                 <div class="player-info">
                   <div class="player-name">
@@ -443,7 +444,19 @@
     }
 
     // Load brackets when page loads
-    window.addEventListener('DOMContentLoaded', loadBrackets);
+    window.addEventListener('DOMContentLoaded', () => {
+      // Force clear any cached data
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => {
+            caches.delete(name);
+          });
+        });
+      }
+      
+      // Force reload data
+      loadBrackets();
+    });
   </script>
 </body>
 </html>
